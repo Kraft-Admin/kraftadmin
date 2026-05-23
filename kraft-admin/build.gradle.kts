@@ -66,7 +66,7 @@ publishing {
         create<MavenPublication>("mavenJava") {
             groupId = "com.bowerzlabs"
             artifactId = "kraft-admin"
-            version = "0.1.12-beta"
+            version = project.version.toString()
 
             project.shadow.component(this)
             artifact(tasks.named("sourcesJar"))

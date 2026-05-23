@@ -77,13 +77,26 @@ jobs:
             "https://central.sonatype.com/api/v1/publisher/upload?publishingType=AUTOMATIC")
           echo "kraft-admin Deployment ID: $RESPONSE"
 
-      - name: Generate GitHub Release Tag & Assets
+      # Step 1: Create release as draft so it is mutable
+      - name: Create draft release
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.event.inputs.release_version }}
           name: Release v${{ github.event.inputs.release_version }}
           generate_release_notes: true
+          draft: true
           prerelease: ${{ github.event.inputs.is_prerelease }}
           files: |
             kraft-pulse/build/libs/kraft-pulse-*.jar
             kraft-admin/build/libs/kraft-admin-*.jar
+
+      # Step 2: Publish the draft — makes it visible, assets already attached
+      - name: Publish release
+        run: |
+          curl --fail-with-body \
+            --request PATCH \
+            --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            --header "Accept: application/vnd.github+json" \
+            --data '{"draft": false}' \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.create_release.outputs.id }}"
