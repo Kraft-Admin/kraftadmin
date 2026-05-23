@@ -133,6 +133,7 @@ jobs:
           tag_name: v${{ github.event.inputs.release_version }}
           name: Release v${{ github.event.inputs.release_version }}
           generate_release_notes: true
+          draft: true
           files: |
             kraft-admin/build/libs/*.jar
           prerelease: ${{ github.event.inputs.is_prerelease }}
