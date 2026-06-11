@@ -11,10 +11,12 @@ import model.PulseContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import java.util.UUID
 
 @Aspect
 @Component
+@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true", matchIfMissing = false)
 class KraftScheduledTaskAspect(
     private val captor: PulseTelemetryCaptor
 ) {
@@ -94,9 +96,13 @@ class KraftScheduledTaskAspect(
             )
             captor.recordBackgroundException(exceptionEntry)
 
+
             throw ex
         } finally {
             PulseContextHolder.clear()
         }
     }
 }
+
+//958747
+//        Nyadero Brian Odhiambo
