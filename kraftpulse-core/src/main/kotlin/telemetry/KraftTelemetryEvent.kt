@@ -9,31 +9,6 @@ import java.util.UUID
 // ---------------------------------------------------------------------------
 
 data class KraftTelemetryEvent(
-//    val id: String = UUID.randomUUID().toString(),
-////    val traceId: String,                        // Groups all events in one request/job
-//    val timestamp: Long = System.currentTimeMillis(),
-//
-//    // Classification
-//    val type: TelemetryType,
-//    val resource: String,                       // e.g. "Sponsor", "User", "OrderJob"
-//    val action: String,                         // e.g. "FETCH_ALL", "SAVE", "DELETE"
-//
-//    // Outcome
-//    val durationMs: Long,
-////    val status: EventStatus,
-//    val error: ErrorDetails? = null,
-//
-//    // Who triggered it
-////    val actor: AdminActor? = null,
-//
-//    // What happened
-//    val impact: EventImpact? = null,
-//    val request: RequestDetails? = null,
-//    val geo: GeoData? = null,
-//
-//    // Extensible tags (env, version, region, etc.)
-//    val tags: Map<String, String> = emptyMap()
-
     val id: String = UUID.randomUUID().toString(),
     val timestamp: Long = System.currentTimeMillis(),
     val traceId: String,
