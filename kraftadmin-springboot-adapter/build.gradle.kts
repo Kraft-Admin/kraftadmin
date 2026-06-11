@@ -46,6 +46,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("io.mockk:mockk:1.13.10")
+    testImplementation("jakarta.persistence:jakarta.persistence-api:3.1.0")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-mongodb")
     testImplementation(kotlin("test"))
 }
 
