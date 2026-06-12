@@ -1,5 +1,6 @@
 package com.kraftadmin.ui_descriptors
 
+import com.kraftadmin.annotations.RichTextConfig
 import com.kraftadmin.spi.SelectOption
 import kotlin.reflect.KClass
 
@@ -19,5 +20,15 @@ data class ColumnDescriptor(
     val validationMessages: Map<String, String>? = null,
     // Server-side error message (e.g., "This email is already taken")
     val error: String? = null,
-    val lookup: LookupDescriptor? = null
+    val lookup: LookupDescriptor? = null,
+    val wysiwygConfig: WYSIWYGOptions? = null
+)
+
+/**
+ * Clean POJO representation of the UI configuration parameters
+ */
+data class WYSIWYGOptions(
+    val toolbar: String,
+    val placeholder: String? = null,
+    val options: List<List<Any>> = listOf(),
 )

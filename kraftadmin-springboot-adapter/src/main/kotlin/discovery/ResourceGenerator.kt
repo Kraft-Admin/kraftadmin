@@ -13,6 +13,7 @@ import com.kraftadmin.spi.SelectOption
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
+import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import com.kraftadmin.util.JakartaValidationExtractor
 import com.kraftadmin.utils.files.AdminStorageProvider
 import config.KraftPulseSpringKraftAdminProperties
@@ -21,6 +22,7 @@ import logging.KraftAdminAuditor
 import telementary.KraftTelemetryService
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.support.TransactionTemplate
+import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -91,10 +93,7 @@ object ResourceGenerator {
         ) {
             init {
                 kClass.memberProperties.forEach { prop ->
-                    val javaField = prop.javaField
-                    if (javaField == null){
-                        return@forEach
-                    }
+                    val javaField = prop.javaField ?: return@forEach
 
 //                    println("\n--- PROP: ${kClass.simpleName}.${prop.name} ---")
 //
@@ -152,6 +151,21 @@ object ResourceGenerator {
                     // === STEP 6: Resolve type and default ===
                     val (colType, defaultVal) = resolveTypeAndDefault(prop, isOneToOne, isManyToOne, isManyToMany, isOneToMany)
 //                    println("  colType=$colType defaultVal=$defaultVal")
+
+                    val richTextEditor = targetEntityClass?.let { tkc ->
+                        val kraftAdminFieldAnnotation = resolveAnnotation(javaField, prop, KraftAdminField::class)
+                    }
+
+                    val adminFieldAnn = resolveAnnotation(javaField, prop, KraftAdminField::class)
+                    val wysiwygConfigValue = if (colType == FormInputType.WYSIWYG) {
+                        adminFieldAnn?.wysiwygConfig?.let { ann ->
+                            WYSIWYGOptions(
+                                toolbar = ann.toolbarProfile.name,
+                                placeholder = ann.placeholder.ifBlank { "Enter ${prop.name}" },
+                                options = ann.toolbarProfile.toolbarConfig
+                            )
+                        }
+                    } else null
 
                     // === STEP 7: Resolve lookup config ===
                     val lookupConfig = targetEntityClass?.let { tkc ->
@@ -230,7 +244,8 @@ object ResourceGenerator {
                         validationMessages = if (messages.isEmpty()) null else messages,
 
                         placeholder = if (targetEntityClass != null) "Search ${prop.name}..." else "Enter ${prop.name}",
-                        visible = !prop.name.equals("id", ignoreCase = true) && !isOneToMany
+                        visible = !prop.name.equals("id", ignoreCase = true) && !isOneToMany,
+                        wysiwygConfig = wysiwygConfigValue
                     )
                 }
             }
@@ -259,6 +274,17 @@ object ResourceGenerator {
 
                     val (type, default) = resolveTypeAndDefault(prop, false, false, false, false)
 
+                    val subAdminFieldAnn = resolveAnnotation(javaField, prop, KraftAdminField::class)
+                    val subWysiwygConfigValue = if (type == FormInputType.WYSIWYG) {
+                        subAdminFieldAnn?.wysiwygConfig?.let { ann ->
+                            WYSIWYGOptions(
+                                toolbar = ann.toolbarProfile.name,
+                                placeholder = ann.placeholder.ifBlank { "Enter ${prop.name}" },
+                                options = ann.toolbarProfile.toolbarConfig
+                            )
+                        }
+                    } else null
+
                     // Extract rules for sub-fields
                     val subRules = validationExtractor.extractRules(javaField)
                     val subMessages = validationExtractor.extractMessages(javaField)
@@ -282,7 +308,8 @@ object ResourceGenerator {
                         sortable = true,
                         visible = true,
                         required = subRules.contains("required"),
-                        placeholder = "Enter ${prop.name}"
+                        placeholder = "Enter ${prop.name}",
+                        wysiwygConfig = subWysiwygConfigValue
                     )
                 }
             }

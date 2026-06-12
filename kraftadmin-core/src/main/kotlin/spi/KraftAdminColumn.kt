@@ -3,6 +3,7 @@ package com.kraftadmin.spi
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
+import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import kotlin.reflect.KClass
 
 data class KraftAdminColumn(
@@ -26,7 +27,8 @@ data class KraftAdminColumn(
     // Temporary container for server-side validation results
     var currentError: String? = null,
     // The configuration for the lookup
-    val lookup: LookupDescriptor? = null
+    val lookup: LookupDescriptor? = null,
+    val wysiwygConfigValue: WYSIWYGOptions? = null,
 ) {
     fun toDescriptor(): ColumnDescriptor =
         ColumnDescriptor(
@@ -44,7 +46,8 @@ data class KraftAdminColumn(
             validationRules = validationRules,
             validationMessages = validationMessages,
             error = currentError,
-            lookup = lookup
+            lookup = lookup,
+            wysiwygConfig = wysiwygConfigValue
         )
 }
 

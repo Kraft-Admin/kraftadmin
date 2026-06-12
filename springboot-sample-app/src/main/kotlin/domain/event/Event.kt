@@ -1,8 +1,11 @@
 package com.kraftadmin.domain.event
 
-//import com.kraftadmin.annotations.KraftAdminField
-//import com.kraftadmin.annotations.KraftAdminLookup
+import com.kraftadmin.annotations.KraftAdminField
+import com.kraftadmin.annotations.KraftAdminLookup
+import com.kraftadmin.annotations.RichTextConfig
+import com.kraftadmin.annotations.ToolbarProfile
 import com.kraftadmin.domain.base.BaseEntity
+import com.kraftadmin.enums.FormInputType
 //import com.kraftadmin.enums.FormInputType
 import jakarta.persistence.*
 import jakarta.validation.constraints.NotEmpty
@@ -15,30 +18,38 @@ class Event(
     @field:NotEmpty(message = "Event title is required")
     var title: String = "",
 
-//    @KraftAdminField(inputType = FormInputType.EMAIL)
+    @KraftAdminField(inputType = FormInputType.EMAIL)
     var contactEmail: String? = null,
 
-//    @KraftAdminField(inputType = FormInputType.TEL)
+    @KraftAdminField(inputType = FormInputType.TEL)
     var contactPhone: String? = null,
 
-//    @KraftAdminField(inputType = FormInputType.URL)
+    @KraftAdminField(inputType = FormInputType.URL)
     var websiteUrl: String? = null,
 
-//    @KraftAdminField(inputType = FormInputType.COLOR)
+    @KraftAdminField(inputType = FormInputType.COLOR)
     var themeColor: String = "#3b82f6",
 
-//    @KraftAdminField(inputType = FormInputType.RANGE)
+    @KraftAdminField(inputType = FormInputType.RANGE)
     @Column(name = "intensity_level")
     var excitementLevel: Int = 50, // Test range 0-100
 
-//    @KraftAdminField(inputType = FormInputType.TIME)
+    @KraftAdminField(inputType = FormInputType.TIME)
     var dailyStartTime: LocalTime? = null,
 
-//    @KraftAdminField(inputType = FormInputType.DATE)
+    @KraftAdminField(inputType = FormInputType.DATE)
     var deadlineDate: LocalDate? = null,
 
 //    @KraftAdminField(inputType = FormInputType.WYSIWYG)
     @Lob
+    @KraftAdminField(
+        label = "Terms And Conditions",
+        wysiwygConfig = RichTextConfig(
+            toolbarProfile = ToolbarProfile.MINIMAL,
+            placeholder = "Enter terms and conditions"
+        ),
+        inputType = FormInputType.WYSIWYG
+    )
     var termsAndConditions: String? = null,
 
     @Enumerated(EnumType.STRING)
@@ -61,7 +72,7 @@ class Event(
     // Tests single-link relationship ownership
     @OneToOne(cascade = [CascadeType.ALL], orphanRemoval = true)
     @JoinColumn(name = "insurance_id")
-//    @KraftAdminLookup(displayField = "provider", lookupKey = "provider", resource = EventInsurance::class)
+    @KraftAdminLookup(displayField = "provider", lookupKey = "provider", resource = EventInsurance::class)
     var insurancePolicy: EventInsurance? = null,
 
     // --- ONE-TO-MANY ---
@@ -80,7 +91,7 @@ class Event(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id")
-//    @KraftAdminLookup(displayField = "name", lookupKey = "name", resource = Venue::class)
+    @KraftAdminLookup(displayField = "name", lookupKey = "name", resource = Venue::class)
     var venue: Venue? = null,
 
     @ManyToMany
@@ -89,7 +100,7 @@ class Event(
         joinColumns = [JoinColumn(name = "event_id")],
         inverseJoinColumns = [JoinColumn(name = "sponsor_id")]
     )
-//    @KraftAdminLookup(displayField = "name", lookupKey = "name", resource = Sponsor::class)
+    @KraftAdminLookup(displayField = "name", lookupKey = "name", resource = Sponsor::class)
     var sponsors: MutableSet<Sponsor> = mutableSetOf()
 ) : BaseEntity()
 

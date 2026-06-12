@@ -3,6 +3,7 @@ package com.kraftadmin.spi
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
+import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import kotlin.reflect.KClass
 
 /**
@@ -35,6 +36,8 @@ abstract class AbstractResource<T : Any>(
         lookup: LookupDescriptor? = null,
         validationRules: String? = null,
         validationMessages: Map<String, String>? = null,
+        error: String? = null,
+        wysiwygConfig: WYSIWYGOptions? = null
     ) {
         _columns.add(
             KraftAdminColumn(
@@ -52,6 +55,8 @@ abstract class AbstractResource<T : Any>(
                 lookup = lookup,
                 validationRules = validationRules,
                 validationMessages = validationMessages,
+                currentError = error,
+                wysiwygConfigValue = wysiwygConfig
             )
         )
     }
