@@ -75,17 +75,6 @@ class SpringSecurityAdapter : AdminSecurityProvider {
         response.setBody("Unauthorized")
     }
 
-//    override fun getCurrentUser(): AdminPrincipal? {
-//        val auth = SecurityContextHolder.getContext().authentication
-//            ?.takeIf { it.isAuthenticated && it.name != "anonymousUser" }
-//            ?: return null
-//
-//        return AdminPrincipal(
-//            username = extractUsername(auth),
-//            roles = auth.authorities.map { it.authority }.toSet(),
-//            raw = auth
-//        )
-//    }
 
     private fun extractMetadata(auth: Authentication): Map<String, String> {
         val metadata = mutableMapOf<String, String>()
@@ -119,7 +108,7 @@ class SpringSecurityAdapter : AdminSecurityProvider {
         return AdminPrincipal(
             username = extractUsername(auth),
             roles = auth.authorities.map { it.authority }.toSet(),
-            metadata = extractMetadata(auth), // Pass the resolved map
+            metadata = extractMetadata(auth),
             raw = auth
         )
     }
