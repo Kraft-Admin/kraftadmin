@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.NestedConfigurationProperty
 import org.springframework.context.annotation.Primary
 import security.BasicAuthConfig
+import java.util.UUID
 
 @ConfigurationProperties(prefix = "kraftpulse")
 data class KraftPulseSpringKraftAdminProperties(
@@ -72,7 +73,10 @@ data class KraftPulseSpringKraftAdminProperties(
     class TelemetryProperties(
         override var cloudUrl: String = "http://localhost:8090", // Ktor Sink
         override var enabled: Boolean = false,
-        override var path: String? = ".kraft-telemetry.db"
+        override var path: String? = ".kraft-telemetry.db",
+        override var provider: TelemetryProvider = TelemetryProvider.LOCAL,
+        override val apiKey: String? = null,
+        override val secretKey: String? = null
     ) : TelemetryConfig {
     }
 }

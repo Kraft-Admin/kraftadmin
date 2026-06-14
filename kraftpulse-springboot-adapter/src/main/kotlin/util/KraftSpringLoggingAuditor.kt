@@ -4,7 +4,7 @@ import security.AdminUserDTO
 import logging.KraftLogAction
 import logging.KraftAdminAuditor
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import org.springframework.stereotype.Service
 
 import org.springframework.web.context.request.RequestContextHolder

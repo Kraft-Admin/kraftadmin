@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 import security.SecurityProviderChain
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import util.KraftSpringLoggingService
 
 @AutoConfiguration

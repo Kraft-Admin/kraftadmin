@@ -6,7 +6,7 @@ import util.KraftSpringLoggingAuditor
 import util.KraftSpringLoggingService
 import logging.KraftAdminAuditor
 import logging.NoOpKraftAuditor
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import telemetry.SQLiteTelemetryProvider
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider

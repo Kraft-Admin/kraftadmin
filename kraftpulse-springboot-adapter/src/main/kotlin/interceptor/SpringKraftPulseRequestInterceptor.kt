@@ -3,11 +3,7 @@ package interceptor
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import model.PulseContext
-import model.PulseExceptionEntry
-import org.slf4j.LoggerFactory
 import org.springframework.web.servlet.HandlerInterceptor
-import security.SecurityProviderChain
-import telementary.KraftTelemetryService
 import util.PulseContextHolder
 
 class SpringKraftPulseRequestInterceptor(

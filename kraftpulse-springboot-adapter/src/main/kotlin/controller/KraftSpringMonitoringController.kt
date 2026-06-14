@@ -3,7 +3,6 @@ package controller
 import analytics.LatencyReport
 import analytics.ResourceStats
 import analytics.SortMetric
-import analytics.TelemetryFilter
 import model.KraftHttpClientEvent
 import model.KraftTaskEvent
 import model.PulseExceptionEntry
@@ -13,7 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import analytics.TelemetryWithQueries
 import analytics.TimeInterval
 import analytics.TimeRange

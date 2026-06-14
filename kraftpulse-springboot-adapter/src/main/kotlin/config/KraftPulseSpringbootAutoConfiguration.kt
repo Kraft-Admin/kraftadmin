@@ -113,7 +113,7 @@ import org.springframework.boot.web.servlet.error.ErrorAttributes
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.web.client.RestTemplate
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import telemetry.KraftPulse
 import util.KraftSpringLoggingService
 
@@ -121,7 +121,7 @@ import util.KraftSpringLoggingService
 @Import(
     KraftTelemetryAutoConfiguration::class,
     KraftPulseWebConfiguration::class,
-    KraftAnalyticsConfiguration::class,
+//    KraftAnalyticsConfiguration::class,
     KraftSpringAuditAutoConfiguration::class,
     KraftAdminSpringSecurityConfig::class,
     JpaPulseAutoconfiguration::class,
