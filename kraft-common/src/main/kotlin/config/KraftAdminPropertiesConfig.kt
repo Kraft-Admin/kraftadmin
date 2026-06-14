@@ -1,6 +1,7 @@
 package config
 
 import security.BasicAuthConfig
+import java.util.UUID
 
 interface KraftAdminPropertiesConfig {
     val enabled: Boolean
@@ -63,4 +64,21 @@ interface TelemetryConfig {
     var cloudUrl: String
     var enabled: Boolean
     var path: String?
+    var provider: TelemetryProvider
+    val apiKey: String?
+    val secretKey: String?
+}
+
+enum class TelemetryProvider(
+    val displayName: String,
+    val description: String
+) {
+    LOCAL(
+        "Local",
+        "des"
+    ),
+    CLOUD(
+        "Cloud",
+        "des"
+    )
 }

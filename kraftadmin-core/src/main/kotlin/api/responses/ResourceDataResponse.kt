@@ -5,8 +5,6 @@ import com.kraftadmin.ui_descriptors.ResourceDescriptor
 
 data class ResourceDataResponse(
     val resource: ResourceDescriptor,
-//    val rows: List<ResourceRow>
-//    val pagedResponse: PagedResponse<ResourceRow>
 )
 
 data class PagedResponse<T>(

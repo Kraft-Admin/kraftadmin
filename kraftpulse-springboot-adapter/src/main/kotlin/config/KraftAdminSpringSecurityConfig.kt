@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
+import org.springframework.core.env.Environment
 import security.AdminSecurityConfig
 import security.AdminSecurityFilter
 import security.AdminSecurityProvider
@@ -21,7 +22,7 @@ import security.SpringSecurityAdapter
 @ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
 class KraftAdminSpringSecurityConfig(
     private val properties: KraftPulseSpringKraftAdminProperties,
-    private val env: org.springframework.core.env.Environment,
+    private val env: Environment,
 ) {
 
     private val log = LoggerFactory.getLogger(KraftAdminSpringSecurityConfig::class.java)
@@ -60,7 +61,7 @@ class KraftAdminSpringSecurityConfig(
         val providers = mutableListOf<AdminSecurityProvider>()
 
         if (isSpringSecurityActive()) {
-            // ONLY use the adapter. Do NOT add the builtin provider.
+            // ONLY use the adapter.
             // This stops the library from trying to manage its own "admin" user.
             providers.add(SpringSecurityAdapter())
         } else {

@@ -8,7 +8,7 @@ import java.util.*
 
 class LocalFileSystemAdapter(
     private val uploadDir: String = "uploads/admin",
-    private val publicBaseDir: String = "public",
+    private val publicPrefix: String = "/admin/files",
 ) : AdminStorageProvider {
 
     private val logger: Logger = LoggerFactory.getLogger(LocalFileSystemAdapter::class.java)
@@ -21,27 +21,38 @@ class LocalFileSystemAdapter(
 
     override fun upload(bytes: ByteArray, fileName: String, context: String): String {
         val extension = fileName.substringAfterLast(".", "bin")
-        val uniqueName = "${UUID.randomUUID()}.$extension"
+        // Use context namespace within the filename string to mirror cloud structures
+        val uniqueName = "$context-${UUID.randomUUID()}.$extension"
         val targetFile = File(uploadDir, uniqueName)
 
         Files.write(targetFile.toPath(), bytes)
 
-        return "/admin/files/$uniqueName"
+        // Ensure public path format is cleanly normalized
+        val sanitizedPrefix = if (publicPrefix.endsWith("/")) publicPrefix else "$publicPrefix/"
+        return "$sanitizedPrefix$uniqueName"
     }
 
     override fun delete(fileUrl: String) {
         try {
-            // Extract the filename from the URL
-            // e.g., /admin/files/abc-123.jpg -> abc-123.jpg
+            // Extract the filename from the URL route tail end
+            // e.g., /admin/files/users-abc-123.jpg -> users-abc-123.jpg
             val fileName = fileUrl.substringAfterLast("/")
             val file = File(uploadDir, fileName)
 
             if (file.exists()) {
                 val deleted = file.delete()
-                if (deleted) logger.info("Successfully deleted old file: {}", fileName)
+                if (deleted) logger.info("Successfully deleted old local file: {}", fileName)
             }
         } catch (e: Exception) {
-            logger.error("Failed to delete file at $fileUrl", e)
+            logger.error("Failed to delete local file at $fileUrl", e)
         }
+    }
+
+    /**
+     * Confirms ownership if the incoming reference matches the local public routing prefix signature.
+     */
+    override fun contains(fileUrl: String): Boolean {
+        val sanitizedPrefix = publicPrefix.trimEnd('/')
+        return fileUrl.startsWith(sanitizedPrefix) || fileUrl.contains("/files/")
     }
 }

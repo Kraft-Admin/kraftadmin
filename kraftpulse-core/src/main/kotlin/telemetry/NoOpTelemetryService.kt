@@ -5,7 +5,6 @@ import analytics.TelemetryWithQueries
 import model.KraftHttpClientEvent
 import model.KraftTaskEvent
 import model.PulseExceptionEntry
-import telementary.KraftTelemetryService
 
 /**
  * A silent placeholder for when telemetry is disabled.
@@ -39,6 +38,15 @@ class NoOpTelemetryService : KraftTelemetryService {
     }
 
     override fun <T> getPageData(
+        table: String,
+        limit: Int,
+        offset: Int,
+        clazz: Class<T>
+    ): List<T> {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T> fetchAllPaged(
         table: String,
         limit: Int,
         offset: Int,

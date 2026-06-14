@@ -7,7 +7,7 @@ import model.PulseExceptionEntry
 import org.slf4j.LoggerFactory
 import security.AdminUserDTO
 import security.SecurityProviderChain
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import telemetry.KraftTelemetryEvent
 import telemetry.TelemetryType
 import util.PulseContextHolder

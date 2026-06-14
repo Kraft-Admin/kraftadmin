@@ -24,7 +24,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import logging.KraftAdminAuditor
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import org.hibernate.Hibernate
 import org.hibernate.proxy.HibernateProxy
 import org.slf4j.LoggerFactory

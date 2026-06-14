@@ -1,5 +1,8 @@
 package analytics
 
+import model.KraftHttpClientEvent
+import model.KraftTaskEvent
+import model.PulseExceptionEntry
 import model.QueryEvent
 import telemetry.KraftTelemetryEvent
 import java.time.Instant
@@ -43,6 +46,8 @@ interface AnalyticsProvider {
 
     fun save(event: QueryEvent)
 
+    fun saveTelemetryEvent(event: KraftTelemetryEvent)
+
     /**
      * Fetches the underlying SQL execution details for a specific trace.
      * Used for deep-dive diagnostics in the UI.
@@ -54,6 +59,13 @@ interface AnalyticsProvider {
      * Perfect for the "Live Feed" diagnostic view in the UI.
      */
     fun getLatestWithDetails(limit: Int): List<TelemetryWithQueries>
+
+    fun saveException(exceptionData: PulseExceptionEntry)
+    fun saveTask(taskEvent: KraftTaskEvent)
+    fun saveHttpClientEvent(event: KraftHttpClientEvent)
+    fun fetchLatestWithQueries(limit: Int): List<TelemetryWithQueries>
+    fun fetchComprehensiveDeepDive(traceId: String): Map<String, Any?>
+    fun <T> fetchAllPaged(table: String, limit: Int, offset: Int, clazz: Class<T>): List<T>
 }
 
 // --- SUPPORTING MODELS ---

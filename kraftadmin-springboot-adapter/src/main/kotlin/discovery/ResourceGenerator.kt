@@ -19,10 +19,9 @@ import com.kraftadmin.utils.files.AdminStorageProvider
 import config.KraftPulseSpringKraftAdminProperties
 import jakarta.persistence.*
 import logging.KraftAdminAuditor
-import telementary.KraftTelemetryService
+import telemetry.KraftTelemetryService
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.support.TransactionTemplate
-import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -152,10 +151,7 @@ object ResourceGenerator {
                     val (colType, defaultVal) = resolveTypeAndDefault(prop, isOneToOne, isManyToOne, isManyToMany, isOneToMany)
 //                    println("  colType=$colType defaultVal=$defaultVal")
 
-                    val richTextEditor = targetEntityClass?.let { tkc ->
-                        val kraftAdminFieldAnnotation = resolveAnnotation(javaField, prop, KraftAdminField::class)
-                    }
-
+                    //
                     val adminFieldAnn = resolveAnnotation(javaField, prop, KraftAdminField::class)
                     val wysiwygConfigValue = if (colType == FormInputType.WYSIWYG) {
                         adminFieldAnn?.wysiwygConfig?.let { ann ->

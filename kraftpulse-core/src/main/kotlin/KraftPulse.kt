@@ -2,7 +2,6 @@ package telemetry
 
 import model.PulseContext
 import model.PulseExceptionEntry
-import telementary.KraftTelemetryService
 import java.util.UUID
 
 object KraftPulse {
