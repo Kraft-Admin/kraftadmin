@@ -1,7 +1,5 @@
 package model
 
-import java.util.UUID
-
 /**
  * The monitoring payload for KraftPulse exceptions.
  * Retention: 7 Days (SQLite) / Indefinite (Cloud)

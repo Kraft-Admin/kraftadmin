@@ -1,7 +1,5 @@
 package model
 
-import java.time.Instant
-
 // ---------------------------------------------------------------------------
 // QueryEvent — the detailed record of a single database operation.
 // Populated by the JPA/JDBC interceptor and handed to QueryPulseInterceptor.

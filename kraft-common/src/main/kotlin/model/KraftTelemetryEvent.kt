@@ -44,7 +44,8 @@ enum class TelemetryType {
     FILE_STORAGE,       // Upload / Download
     AUTH,               // Login, token validation, permission check
     SYSTEM,             // Internal KraftAdmin overhead
-    AUDIT               // Business-level audit trail (create/update/delete)
+    AUDIT,               // Business-level audit trail (create/update/delete)
+    RESOURCE_USAGE
 }
 
 enum class EventStatus {
