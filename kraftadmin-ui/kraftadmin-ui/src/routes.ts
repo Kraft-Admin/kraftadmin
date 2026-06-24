@@ -8,6 +8,7 @@ import LogsView from './lib/pages/LogsView.svelte'
 import Settings from './lib/pages/Settings.svelte'
 import Analytics from './lib/pages/Analytics.svelte'
 import Telemetry from './lib/pages/Telemetry.svelte'
+import SystemVitals from './lib/pages/SystemVitals.svelte'
 
 export const routes = {
     '/': Dashboard,
@@ -20,5 +21,6 @@ export const routes = {
     "/settings": Settings,
     "/analytics": Analytics,
     "/telemetry": Telemetry,
+    "/system": SystemVitals,
     '*': NotFound,
 }
