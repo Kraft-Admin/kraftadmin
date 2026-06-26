@@ -13,6 +13,9 @@ dependencies {
     // Core Micrometer (Data collection standard)
     api("io.micrometer:micrometer-observation:1.13.0") // Or latest
     api("io.micrometer:micrometer-core:1.13.0")
+    // flyway sqlite
+    api("org.flywaydb:flyway-core:10.0.0")
+    api("org.xerial:sqlite-jdbc:3.45.0.0")
 
     compileOnly("org.slf4j:slf4j-api:2.0.9")
     testImplementation(kotlin("test"))
