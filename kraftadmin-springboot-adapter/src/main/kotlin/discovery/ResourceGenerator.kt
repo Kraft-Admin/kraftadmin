@@ -14,7 +14,7 @@ import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
-import com.kraftadmin.util.JakartaValidationExtractor
+import util.JakartaValidationExtractor
 import com.kraftadmin.utils.files.AdminStorageProvider
 import config.KraftPulseSpringKraftAdminProperties
 import jakarta.persistence.*
