@@ -14,16 +14,16 @@ class SqlQueryEventBuilder {
 
     val request = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
 
-
     fun buildEvents(execInfo: ExecutionInfo, queryInfoList: List<QueryInfo>, dataSourceName: String): List<QueryEvent> {
         val startTime = System.currentTimeMillis() - execInfo.elapsedTime
         val dbProduct = getDbProduct(execInfo)
-
-        // Resolve request dynamically inside the method
         val currentRequest = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
 
-        // Safe resolution: check attribute, then fallback to a default
-        val resolvedTraceId = currentRequest?.getAttribute("traceId")?.toString()!!
+        // Resolve contextual data
+        val resolvedTraceId = currentRequest?.getAttribute("traceId")?.toString() ?: "system"
+        val tenantId = currentRequest?.getAttribute("tenantId")?.toString() ?: "default"
+        val threadName = Thread.currentThread().name
+        val isolationLevel = execInfo.isolationLevel.toString() // Or use a mapping function for names
 
         return queryInfoList.map { queryInfo ->
             val sql = queryInfo.query ?: ""
@@ -31,21 +31,31 @@ class SqlQueryEventBuilder {
             val tableName = extractTableName(sql, type)
 
             QueryEvent(
+                id = java.util.UUID.randomUUID().toString(),
                 traceId = resolvedTraceId,
                 sql = sql,
                 parameters = extractParams(queryInfo),
                 queryType = type,
                 tableName = tableName,
-                entityName = tableName?.lowercase()?.capitalize(), // Simple heuristic
+                entityName = tableName?.lowercase()?.capitalize(),
                 startedAt = startTime,
                 durationMs = execInfo.elapsedTime,
                 rowsAffected = if (type != QueryType.SELECT) (execInfo.result as? Number)?.toInt() ?: 0 else 0,
                 rowsReturned = if (type == QueryType.SELECT) 1 else 0,
+                isSlowQuery = execInfo.elapsedTime > 500,
+                isPotentialNPlusOne = false, // You may want to integrate your detection logic here
+                error = mapError(execInfo),
                 dataSource = dataSourceName,
                 databaseProduct = dbProduct,
-                error = mapError(execInfo),
-                isSlowQuery = execInfo.elapsedTime > 500, // Threshold in ms,
                 schema = getDbSchema(execInfo),
+                tenantId = tenantId,
+                threadName = threadName,
+                isolationLevel = isolationLevel,
+                isReadOnly = try { execInfo.statement?.connection?.isReadOnly ?: false } catch (e: Exception) { false },
+                isBatch = execInfo.isBatch,
+                batchSize = if (execInfo.isBatch) execInfo.batchSize else null,
+                transactionId = currentRequest?.getAttribute("transactionId")?.toString(),
+                executionPlan = null // Optional: Only fetch if isSlowQuery is true
             )
         }
     }
