@@ -1,4 +1,4 @@
-package com.kraftadmin.util
+package util
 
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
@@ -174,7 +174,7 @@ open class Validation : KraftValidate {
         if (matcher.find()) {
             return matcher.group(1).toInt()
         }
-        return if (type == "min") 5 else Int.Companion.MAX_VALUE // Defaults
+        return if (type == "min") 5 else Int.MAX_VALUE // Defaults
     }
 
     private fun extractRegex(rules: String): String {
