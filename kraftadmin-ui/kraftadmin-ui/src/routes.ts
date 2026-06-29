@@ -9,18 +9,39 @@ import Settings from './lib/pages/Settings.svelte'
 import Analytics from './lib/pages/Analytics.svelte'
 import Telemetry from './lib/pages/Telemetry.svelte'
 import SystemVitals from './lib/pages/SystemVitals.svelte'
+import LoginPage from './lib/pages/LoginPage.svelte'
+import {wrap} from 'svelte-spa-router/wrap'
+import { authGuard } from './lib/stores/authGuard'
 
 export const routes = {
-    '/': Dashboard,
-    '/resources/:name': ResourceList,
-    '/resources/:name/create': ResourceCreate,
-    '/resources/:name/edit/:id': ResourceCreate,
-    '/resources/:name/:id': ResourceDetail,
-    '/auth/login': Login,
-    "/logs": LogsView, 
-    "/settings": Settings,
-    "/analytics": Analytics,
-    "/telemetry": Telemetry,
-    "/system": SystemVitals,
-    '*': NotFound,
+    "/auth/login": LoginPage,
+
+    "/": admin(Dashboard),
+
+    "/resources/:name": admin(ResourceList),
+
+    "/resources/:name/create": admin(ResourceCreate),
+
+    "/resources/:name/edit/:id": admin(ResourceCreate),
+
+    "/resources/:name/:id": admin(ResourceDetail),
+
+    "/logs": admin(LogsView),
+
+    "/settings": admin(Settings),
+
+    "/analytics": admin(Analytics),
+
+    "/telemetry": admin(Telemetry),
+
+    "/system": admin(SystemVitals),
+
+    "*": NotFound
+};
+
+function admin(component:any) {
+    return wrap({
+        component,
+        conditions: [authGuard]
+    });
 }

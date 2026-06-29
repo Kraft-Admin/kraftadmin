@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { location } from 'svelte-spa-router';
+  import { location, replace } from 'svelte-spa-router';
   import { isDark } from '../stores/theme';
-  import { token, isAuthenticated, user } from '../stores/auth';
+  import { isAuthenticated, user, clearAuth } from '../stores/auth';
   import { kraftFetch } from '../../api';
 
-  // Structured environment object from backend KraftAdminDescriptor
   export let environment: {
     name: string;
     authMode: string;
@@ -19,25 +18,22 @@
 
   let loggingOut = false;
 
-  // Compute initials for the avatar (e.g., "admin" -> "AD")
   $: initials = $user?.username?.substring(0, 2).toUpperCase() || 'AD';
   $: breadcrumb = $location.split('/').pop() || 'Dashboard';
 
-  async function handleLogout() {
-    if (loggingOut) return;
-    loggingOut = true;
 
+  // Navbar.svelte
+async function handleLogout() {
+    loggingOut = true;
     try {
-      await kraftFetch('/admin/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error("Logout request failed", error);
+        await kraftFetch('/admin/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+        console.error("Logout failed");
     } finally {
-      $token = '';
-      $isAuthenticated = false;
-      loggingOut = false;
-      window.location.hash = '/auth/login';
+        // Force the browser to reset everything
+        replace("/auth/login");
     }
-  }
+}
 </script>
 
 <header class="h-16 bg-bg-surface border-b border-border-subtle flex items-center justify-between px-8 z-10 transition-colors duration-200">
@@ -58,9 +54,9 @@
       aria-label="Toggle Theme"
     >
       {#if $isDark}
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="1" x2="3" y1="12" y2="12"/><line x1="21" x2="23" y1="12" y2="12"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/><line x1="5.64" y1="18.36" x2="4.22" y2="19.78"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="1" x2="3" y1="12" y2="12"/><line x1="21" x2="23" y1="12" y2="12"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/><line x1="5.64" y1="18.36" x2="4.22" y2="19.78"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/></svg>
       {:else}
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       {/if}
     </button>
 

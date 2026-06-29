@@ -11,7 +11,7 @@
       if (res.ok) dashboardData = await res.json();
     } finally {
       loading = false; // Flips exactly when data arrives or fails
-    }    
+    }
   });
 </script>
 
@@ -24,7 +24,7 @@
           <div class="h-4 w-96 bg-zinc-200 dark:bg-zinc-800 rounded-md"></div>
         </div>
       </div>
-      
+
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         {#each Array(3) as _}
           <div class="h-32 bg-bg-surface border border-border-subtle rounded-3xl"></div>
@@ -47,8 +47,11 @@
         </h1>
         <p class="text-zinc-500 text-sm">{dashboardData.welcomeMessage}</p>
       </div>
-      
+
       <div class="flex gap-3">
+       <a href="#/system" class="px-4 py-2 bg-bg-surface border border-border-subtle text-text-main rounded-xl text-xs font-bold hover:border-brand-primary transition-all">
+                System Vitals
+       </a>
         <a href="#/analytics" class="px-4 py-2 bg-bg-surface border border-border-subtle text-text-main rounded-xl text-xs font-bold hover:border-brand-primary transition-all">
           View Analytics
         </a>
@@ -89,7 +92,7 @@
                     <tr class="hover:bg-zinc-500/5 transition-colors">
                         <td class="px-6 py-4 text-text-main font-bold">{feature.name}</td>
                         <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-bold 
+                            <span class="px-3 py-1 rounded-full text-[10px] font-bold
                                 {feature.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-500/10 text-zinc-500'}">
                                 {feature.status}
                             </span>

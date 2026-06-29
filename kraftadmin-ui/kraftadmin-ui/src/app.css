@@ -1,34 +1,232 @@
 @import "tailwindcss";
 
 @theme {
-  /* Semantic Mappings */
+  /* Brand */
   --color-brand-primary: var(--brand-primary);
+
+  /* Backgrounds */
   --color-bg-main: var(--bg-main);
   --color-bg-surface: var(--bg-surface);
+
+  /* Typography */
   --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+
+  /* Borders */
   --color-border-subtle: var(--border-subtle);
 
-  /* Status Colors */
-  --color-success: #22c55e; /* Green */
-  --color-danger: #ef4444;  /* Red */
-  --color-info: #3b82f6;    /* Blue */
+  /* Status */
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  /* Optional Extras */
+  --color-overlay: var(--overlay);
+  --color-shadow: var(--shadow);
 }
 
 :root {
-  /* Light Mode - Slate & Blue focus */
-  --brand-primary: #3b82f6;    /* Blue 600 */
-  --bg-main: #f8fafc;          /* Slate 50 */
-  --bg-surface: #ffffff;       /* White */
-  --text-main: #0f172a;        /* Slate 900 */
-  --border-subtle: #e2e8f0;    /* Slate 200 */
+  /* Brand */
+  --brand-primary: #3b82f6;
+
+  /* Backgrounds */
+  --bg-main: #f8fafc;
+  --bg-surface: #ffffff;
+
+  /* Typography */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+
+  /* Borders */
+  --border-subtle: #e2e8f0;
+
+  /* Status */
+  --success: #22c55e;
+  --danger: #ef4444;
+  --info: #3b82f6;
+
+  /* Misc */
+  --overlay: rgba(15, 23, 42, 0.45);
+  --shadow: rgba(15, 23, 42, 0.08);
 }
 
-/* Standard class selector for Tailwind */
 .dark {
-  /* Dark Mode - Black & Slate focus */
-  --brand-primary: #60a5fa;    /* Blue 400 */
-  --bg-main: #020617;          /* Slate 950 / Near Black */
-  --bg-surface: #0f172a;       /* Slate 900 */
-  --text-main: #f1f5f9;        /* Slate 100 */
-  --border-subtle: #1e293b;    /* Slate 800 */
+  /* Brand */
+  --brand-primary: #60a5fa;
+
+  /* Backgrounds */
+  --bg-main: #020617;
+  --bg-surface: #0f172a;
+
+  /* Typography */
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+
+  /* Borders */
+  --border-subtle: #1e293b;
+
+  /* Status */
+  --success: #22c55e;
+  --danger: #ef4444;
+  --info: #60a5fa;
+
+  /* Misc */
+  --overlay: rgba(2, 6, 23, 0.7);
+  --shadow: rgba(0, 0, 0, 0.45);
+}
+
+@layer components {
+
+  .page {
+    @apply bg-bg-main text-text-main;
+  }
+
+  .card {
+    @apply bg-bg-surface border border-border-subtle rounded-xl shadow-sm;
+  }
+
+  .section {
+    @apply rounded-xl border border-border-subtle bg-bg-surface;
+  }
+
+  .btn-primary {
+    @apply bg-brand-primary text-white rounded-lg px-4 py-2 font-medium transition hover:opacity-90 disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply bg-bg-surface border border-border-subtle text-text-main rounded-lg px-4 py-2 transition hover:bg-bg-main;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white rounded-lg px-4 py-2 transition hover:opacity-90;
+  }
+
+  .input-base {
+    @apply w-full rounded-lg border border-border-subtle bg-bg-surface text-text-main px-3 py-2 outline-none transition;
+  }
+
+  .input-base:focus {
+    @apply border-brand-primary ring-2 ring-brand-primary/20;
+  }
+
+  .input-error {
+    @apply border-danger ring-2 ring-danger/20;
+  }
+
+  .field-label {
+    @apply mb-2 block text-xs font-semibold uppercase tracking-wide text-text-muted;
+  }
+
+  .req-star {
+    @apply ml-1 text-danger;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-brand-primary/10 px-3 py-1 text-xs text-brand-primary;
+  }
+
+  .lookup-dropdown {
+    @apply mt-2 rounded-lg border border-border-subtle bg-bg-surface shadow-lg;
+  }
+
+  .lookup-item {
+    @apply w-full px-3 py-2 text-left text-text-main hover:bg-bg-main transition;
+  }
+
+  .form-container {
+    @apply rounded-xl border border-border-subtle bg-bg-surface p-6;
+  }
+
+  .form-footer {
+    @apply mt-8 flex justify-end gap-3 border-t border-border-subtle pt-6;
+  }
+
+  /* ============================================================
+   Quill / WYSIWYG
+   ============================================================ */
+
+.wysiwyg-editor-wrapper {
+  @apply overflow-hidden rounded-xl border border-border-subtle bg-bg-surface;
+}
+
+.wysiwyg-editor-wrapper .ql-toolbar.ql-snow {
+  @apply border-0 border-b border-border-subtle bg-bg-main;
+  padding: 0.75rem;
+}
+
+.wysiwyg-editor-wrapper .ql-container.ql-snow {
+  @apply border-0 bg-bg-surface text-text-main;
+  font-family: inherit;
+  font-size: 0.875rem;
+  min-height: 220px;
+}
+
+.wysiwyg-editor-wrapper .ql-editor {
+  @apply text-text-main;
+}
+
+.wysiwyg-editor-wrapper .ql-editor.ql-blank::before {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.wysiwyg-editor-wrapper .ql-editor a {
+  @apply text-brand-primary underline;
+}
+
+.wysiwyg-editor-wrapper .ql-editor blockquote {
+  @apply border-l-4 border-brand-primary pl-4 italic;
+}
+
+.wysiwyg-editor-wrapper .ql-editor pre {
+  @apply rounded-lg bg-bg-main p-4;
+}
+
+.wysiwyg-editor-wrapper .ql-editor code {
+  @apply rounded bg-bg-main px-1 py-0.5;
+}
+
+/* Toolbar icons */
+
+.wysiwyg-editor-wrapper .ql-snow .ql-stroke {
+  stroke: var(--text-main);
+}
+
+.wysiwyg-editor-wrapper .ql-snow .ql-fill {
+  fill: var(--text-main);
+}
+
+.wysiwyg-editor-wrapper .ql-snow .ql-picker {
+  color: var(--text-main);
+}
+
+.wysiwyg-editor-wrapper .ql-snow .ql-picker-options {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+.wysiwyg-editor-wrapper .ql-snow button:hover,
+.wysiwyg-editor-wrapper .ql-snow button.ql-active,
+.wysiwyg-editor-wrapper .ql-snow .ql-picker-label:hover,
+.wysiwyg-editor-wrapper .ql-snow .ql-picker-label.ql-active {
+  color: var(--brand-primary);
+}
+
+.wysiwyg-editor-wrapper .ql-snow button:hover .ql-stroke,
+.wysiwyg-editor-wrapper .ql-snow button.ql-active .ql-stroke {
+  stroke: var(--brand-primary);
+}
+
+.wysiwyg-editor-wrapper .ql-snow button:hover .ql-fill,
+.wysiwyg-editor-wrapper .ql-snow button.ql-active .ql-fill {
+  fill: var(--brand-primary);
+}
+
+.wysiwyg-editor-wrapper .ql-tooltip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  box-shadow: 0 10px 30px var(--shadow);
+}
+
 }
