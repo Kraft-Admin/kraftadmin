@@ -4,7 +4,7 @@ import com.kraftadmin.enums.FormInputType
 
 /**
  * Customizes the behavior, appearance, and validation of an entity property.
- * * Apply this to fields within a @KraftAdminResource class to override the
+ * Apply this to fields within a @KraftAdminResource class to override the
  * engine's default inference logic.
  *
  * @property label The display name for table headers and form labels.
@@ -22,6 +22,7 @@ import com.kraftadmin.enums.FormInputType
  * @property placeholder The hint text displayed inside the input field when it is empty.
  * @property readonly If true, the field is visible in the form but its value
  * cannot be modified by the admin user.
+ * @property fileConfig Constraints applied when the inputType is FILE or IMAGE.
  */
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
@@ -38,6 +39,7 @@ annotation class KraftAdminField(
     val placeholder: String = "",
     val readonly: Boolean = false,
     val displayField: Boolean = false,
-    
-    val wysiwygConfig: RichTextConfig = RichTextConfig()
+
+    val wysiwygConfig: RichTextConfig = RichTextConfig(),
+    val fileConfig: FileConfig = FileConfig()
 )

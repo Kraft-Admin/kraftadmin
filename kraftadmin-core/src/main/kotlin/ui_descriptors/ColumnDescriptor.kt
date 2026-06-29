@@ -21,7 +21,8 @@ data class ColumnDescriptor(
     // Server-side error message (e.g., "This email is already taken")
     val error: String? = null,
     val lookup: LookupDescriptor? = null,
-    val wysiwygConfig: WYSIWYGOptions? = null
+    val wysiwygConfig: WYSIWYGOptions? = null,
+    val fileOptions: FileConfigDescriptor? = null
 )
 
 /**
@@ -31,4 +32,16 @@ data class WYSIWYGOptions(
     val toolbar: String,
     val placeholder: String? = null,
     val options: List<List<Any>> = listOf(),
+)
+
+/**
+ * File options UI descriptor with sensible default parameters
+ */
+data class FileConfigDescriptor(
+    val multiple: Boolean = false,
+    val maxFiles: Int = 1,
+    val allowedExtensions: List<String> = emptyList(),
+    val minSizeBytes: Long = 0L,
+    val maxSizeBytes: Long = 10 * 1024 * 1024, // 10MB default
+    val allowedMimeTypes: List<String> = emptyList()
 )
