@@ -1,5 +1,6 @@
 <script lang="ts">
   import EmbeddedObjectInput from '../components/EmbeddedObjectInput.svelte';
+  import FileUploader from './FileUploader.svelte';
   import WYSIWYG from './WYSIWYG.svelte';
  
   export let columns: any[] = [];
@@ -17,7 +18,6 @@
   let lastLoadedId: string | null = null;
   let formError: { message: string; raw?: any } | null = null;
 
-  // ✅ Stable fields — only recomputes when columns content actually changes
   let fields: any[] = [];
   let lastColumnsJson = '';
   $: {
@@ -25,7 +25,6 @@
       const json = JSON.stringify(columns);
       if (json !== lastColumnsJson) {
         lastColumnsJson = json;
-        // ✅ Exclude id, timestamps — these are never editable
         fields = columns.filter(c => c.visible && !['id', 'createdAt', 'updatedAt', 'deletedAt'].includes(c.name));
       }
     } catch (e: any) {
@@ -33,180 +32,82 @@
     }
   }
 
-  // ✅ Safely convert a LocalDateTime array [y,m,d,h,min] to datetime-local string
   function arrayToDatetimeLocal(arr: any[]): string {
     const [y, m, d, hh = 0, mm = 0] = arr;
     return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   }
 
-  // ✅ Check if a value is safe to bind to a given column type
   function isSafeValue(type: string, val: any): boolean {
     if (val === null || val === undefined || val === '') return true;
     switch (type) {
-      case 'TEXT':
-      case 'TEXTAREA':
-      case 'WYSIWYG':
-      case 'JSON':
-      case 'SELECT':
-      case 'EMAIL':
-      case 'URL':
-      case 'PASSWORD':
-      case 'TEL':
+      case 'TEXT': case 'TEXTAREA': case 'WYSIWYG': case 'JSON': case 'SELECT': case 'EMAIL': case 'URL': case 'PASSWORD': case 'TEL':
         return typeof val === 'string';
-      case 'NUMBER':
-      case 'RANGE':
+      case 'NUMBER': case 'RANGE':
         return typeof val === 'number';
       case 'CHECKBOX':
         return typeof val === 'boolean';
-      case 'DATETIME':
-      case 'DATE':
-      case 'TIME':
+      case 'DATETIME': case 'DATE': case 'TIME':
         return typeof val === 'string';
-      case 'ARRAY':
-      case 'MULTI_SELECT':
-      case 'MULTI_RELATION':
+      case 'ARRAY': case 'MULTI_SELECT': case 'MULTI_RELATION':
         return Array.isArray(val);
       case 'RELATION':
         return typeof val === 'string' || val === null;
       case 'OBJECT':
         return typeof val === 'object' && !Array.isArray(val);
-      case 'IMAGE':
-      case 'VIDEO':
-      case 'FILE':
+      case 'IMAGE': case 'VIDEO': case 'FILE':
         return typeof val === 'string';
       default:
         return true;
     }
   }
 
+  $: if(initialData && initialData.id){
+    submitLabel = "Update ";
+  }
+
   $: if (columns && columns.length > 0) {
     try {
       const currentId = initialData?.id || 'new';
-
       if (currentId !== lastLoadedId) {
         const newData: any = {};
         const values = initialData.values || {};
-
         columns.forEach(col => {
           try {
-            // ✅ Use ?? not || — preserves 0, false, ""
             const existingValue = values[col.name] ?? null;
-
             if (col.type === 'OBJECT') {
               newData[col.name] = {};
-              // Backend sends EmbeddedResponse { summary, data } — extract .data
               const dataSource = existingValue?.data ?? existingValue ?? {};
               col.subColumns?.forEach((sub: any) => {
-                try {
-                  const rawSubValue = dataSource[sub.name] ?? null;
-                  if (Array.isArray(rawSubValue) && sub.type === 'DATETIME') {
-                    newData[col.name][sub.name] = arrayToDatetimeLocal(rawSubValue);
-                  } else if (rawSubValue === null || rawSubValue === undefined) {
-                    newData[col.name][sub.name] = sub.defaultValue ?? "";
-                  } else {
-                    newData[col.name][sub.name] = rawSubValue;
-                  }
-                } catch (e: any) {
-                  console.error(`[DynamicForm] subColumn "${sub.name}" of "${col.name}":`, e.message);
-                  newData[col.name][sub.name] = "";
-                }
+                const rawSubValue = dataSource[sub.name] ?? null;
+                newData[col.name][sub.name] = (Array.isArray(rawSubValue) && sub.type === 'DATETIME') ? arrayToDatetimeLocal(rawSubValue) : (rawSubValue ?? sub.defaultValue ?? "");
               });
-
             } else if (col.type === 'DATETIME') {
-              // ✅ Handle array format from Jackson LocalDateTime serialization
-              if (Array.isArray(existingValue)) {
-                newData[col.name] = arrayToDatetimeLocal(existingValue);
-              } else {
-                newData[col.name] = existingValue ?? "";
-              }
-
+              newData[col.name] = Array.isArray(existingValue) ? arrayToDatetimeLocal(existingValue) : (existingValue ?? "");
             } else if (col.type === 'DATE') {
-              if (Array.isArray(existingValue)) {
-                const [y, m, d] = existingValue;
-                newData[col.name] = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-              } else {
-                newData[col.name] = existingValue ?? "";
-              }
-
+              newData[col.name] = Array.isArray(existingValue) ? `${existingValue[0]}-${String(existingValue[1]).padStart(2, '0')}-${String(existingValue[2]).padStart(2, '0')}` : (existingValue ?? "");
             } else if (col.type === 'TIME') {
-              if (typeof existingValue === 'string') {
-                newData[col.name] = existingValue.includes('T')
-                  ? existingValue.split('T')[1].substring(0, 5)
-                  : existingValue.substring(0, 5);
-              } else {
-                newData[col.name] = "";
-              }
-
+              newData[col.name] = (typeof existingValue === 'string') ? (existingValue.includes('T') ? existingValue.split('T')[1].substring(0, 5) : existingValue.substring(0, 5)) : "";
             } else if (col.type === 'RELATION') {
-              if (existingValue && typeof existingValue === 'object' && !Array.isArray(existingValue)) {
-                // ObjectResponse { id, displayField }
-                newData[col.name] = existingValue.id ?? null;
-                if (existingValue.displayField && !searchTerms[col.name]) {
-                  searchTerms[col.name] = existingValue.displayField;
-                }
-              } else {
-                newData[col.name] = existingValue ?? null;
-              }
-
+              newData[col.name] = (existingValue && typeof existingValue === 'object') ? existingValue.id : (existingValue ?? null);
+              if (existingValue?.displayField && !searchTerms[col.name]) searchTerms[col.name] = existingValue.displayField;
             } else if (col.type === 'MULTI_RELATION') {
-              if (Array.isArray(existingValue)) {
-                newData[col.name] = existingValue.map(item =>
-                  typeof item === 'object' ? (item.id ?? item) : item
-                );
-                existingValue.forEach(item => {
-                  if (typeof item === 'object' && item.id) {
-                    searchTerms[`${col.name}_${item.id}`] = item.displayField || item.name || item.id;
-                  }
-                });
-              } else {
-                newData[col.name] = [];
-              }
-
+              newData[col.name] = Array.isArray(existingValue) ? existingValue.map(item => (typeof item === 'object' ? item.id : item)) : [];
+              if (Array.isArray(existingValue)) existingValue.forEach(item => { if (item?.id) searchTerms[`${col.name}_${item.id}`] = item.displayField || item.name || item.id; });
             } else if (col.type === 'ARRAY' || col.type === 'MULTI_SELECT') {
-              if (Array.isArray(existingValue)) {
-                newData[col.name] = existingValue;
-              } else if (typeof existingValue === 'string' && existingValue) {
-                newData[col.name] = existingValue.split(',').map((s: string) => s.trim()).filter(Boolean);
-              } else {
-                newData[col.name] = [];
-              }
-
+              newData[col.name] = Array.isArray(existingValue) ? existingValue : (typeof existingValue === 'string' ? existingValue.split(',').map(s => s.trim()).filter(Boolean) : []);
             } else if (col.type === 'NUMBER' || col.type === 'RANGE') {
               newData[col.name] = typeof existingValue === 'number' ? existingValue : (existingValue ?? 0);
-
             } else if (col.type === 'CHECKBOX') {
               newData[col.name] = typeof existingValue === 'boolean' ? existingValue : false;
-
             } else {
-              // TEXT, SELECT, EMAIL, etc.
-              // ✅ If backend sent an object/array for a simple field, coerce to string
-              if (existingValue !== null && typeof existingValue === 'object') {
-                newData[col.name] = Array.isArray(existingValue)
-                  ? existingValue.join(', ')
-                  : (existingValue.displayField ?? existingValue.id ?? JSON.stringify(existingValue));
-              } else {
-                newData[col.name] = existingValue ?? col.defaultValue ?? "";
-              }
+              newData[col.name] = (existingValue !== null && typeof existingValue === 'object') ? (Array.isArray(existingValue) ? existingValue.join(', ') : (existingValue.displayField ?? existingValue.id ?? JSON.stringify(existingValue))) : (existingValue ?? col.defaultValue ?? "");
             }
-          } catch (e: any) {
-            console.error(`[DynamicForm] Error mapping field "${col.name}" (type: ${col.type}):`, {
-              error: e?.message,
-              value: values[col.name]
-            });
-            newData[col.name] = null;
-          }
+          } catch (e) { newData[col.name] = null; }
         });
-
         formData = newData;
         lastLoadedId = currentId;
       }
-    } catch (e: any) {
-      formError = {
-        message: `Failed to initialize form for record "${initialData?.id}"`,
-        raw: e?.message
-      };
-      console.error('[DynamicForm] Fatal error:', e);
-    }
+    } catch (e) { formError = { message: 'Failed to initialize form', raw: e }; }
   }
 
   async function fetchLookups(lookup: any, colName: string, query: string) {
@@ -247,28 +148,49 @@
 
   let uploading: string | null = null;
 
-  async function handleFileChange(event: Event, fieldName: string) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
+  async function handleFileChange(files: FileList, fieldName: string) {
+    if (!files || files.length === 0) return;
+    const col = columns.find(c => c.name === fieldName);
+    const isMultiple = col?.fileConfig?.multiple ?? false;
     uploading = fieldName;
     const fd = new FormData();
-    fd.append('file', file);
-    if (formData[fieldName]) fd.append('oldUrl', formData[fieldName]);
+    if (isMultiple) { Array.from(files).forEach(f => fd.append('files', f)); } 
+    else { fd.append('file', files[0]); if (formData[fieldName]) fd.append('oldUrl', formData[fieldName]); }
     try {
       const response = await fetch('/admin/api/uploads', { method: 'POST', body: fd });
       if (!response.ok) throw new Error('Upload failed');
-      formData[fieldName] = (await response.json()).url;
-    } catch (err) {
-      console.error("Upload error:", err);
-    } finally {
-      uploading = null;
+      const result = await response.json();
+      formData[fieldName] = isMultiple ? [...(formData[fieldName] || []), ...result.urls] : result.url;
+    } finally { uploading = null; }
+  }
+  
+  async function deleteFileFromServer(url: string) {
+    try { await fetch('/admin/api/uploads', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }); } catch (err) { console.error(err); }
+  }
+
+  async function handleFileRemoval(fieldName: string, index: number | null) {
+    const val = formData[fieldName];
+    if (Array.isArray(val)) {
+      const url = val[index!];
+      if (url) await deleteFileFromServer(url);
+      formData[fieldName] = val.filter((_, i) => i !== index);
+    } else {
+      if (val) await deleteFileFromServer(val);
+      formData[fieldName] = null;
     }
   }
 
-  function clearFile(fieldName: string) { formData[fieldName] = null; }
+  async function handleCancel() {
+    for (const col of columns) {
+      if (['IMAGE', 'VIDEO', 'FILE'].includes(col.type) && formData[col.name]) {
+        const val = formData[col.name];
+        if (Array.isArray(val)) { for (const url of val) await deleteFileFromServer(url); } 
+        else { await deleteFileFromServer(val); }
+      }
+    }
+    window.history.back();
+  }
 
- 
   const triggerSubmit = () => onSubmit(formData);
 </script>
 
@@ -299,7 +221,6 @@
           </label>
 
           {#if !safe}
-            <!-- ✅ Skip fields with incompatible value/type — shows what broke instead of crashing -->
             <div style="padding: 0.5rem 0.75rem; border: 1px dashed #ef4444; border-radius: 0.5rem; font-size: 10px; color: #ef4444; font-family: monospace;">
               ⚠ type mismatch: expected {col.type}, got {Array.isArray(val) ? 'array' : typeof val} — {JSON.stringify(val)?.substring(0, 80)}
             </div>
@@ -401,63 +322,48 @@
               {#if col.type === 'RANGE'}<span class="text-xs text-brand-primary font-mono">{formData[col.name] || 0}</span>{/if}
             </div>
 
-          {:else if col.type === 'COLOR'}
+        {:else if col.type === 'COLOR'}
             <div class="flex gap-2">
               <input type="color" bind:value={formData[col.name]} class="color-swatch" />
               <input type="text" bind:value={formData[col.name]} class="input-base font-mono" class:input-error={externalErrors[col.name]} placeholder="#000000" />
             </div>
 
-          {:else if ['IMAGE', 'VIDEO', 'FILE'].includes(col.type)}
-            <div class="space-y-2">
-              <div class="relative group w-full h-32 border-2 border-dashed border-border-subtle rounded-lg
-                          flex flex-col items-center justify-center transition-all hover:border-brand-primary/50
-                          {uploading === col.name ? 'opacity-50 pointer-events-none' : ''}">
-                {#if formData[col.name]}
-                  <img src={formData[col.name]} alt="Preview" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
-                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
-                    <button type="button" on:click={() => clearFile(col.name)}
-                      class="text-white text-xs font-bold bg-red-500 px-3 py-1 rounded">Remove</button>
-                  </div>
-                {:else}
-                  <svg class="w-8 h-8 text-zinc-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/>
-                  </svg>
-                  <span class="text-xs text-zinc-400">Click to upload {col.type.toLowerCase()}</span>
-                {/if}
-                <input type="file"
-                  accept={col.type === 'IMAGE' ? 'image/*' : col.type === 'VIDEO' ? 'video/*' : '*'}
-                  on:change={(e) => handleFileChange(e, col.name)}
-                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-              </div>
-              {#if uploading === col.name}
-                <div class="flex items-center gap-2">
-                  <div class="w-full bg-zinc-800 h-1 rounded-full overflow-hidden">
-                    <div class="bg-brand-primary h-full animate-pulse" style="width: 100%"></div>
-                  </div>
-                  <span class="text-[10px] text-zinc-500">Uploading...</span>
-                </div>
-              {/if}
-            </div>
+          <!-- {:else if ['IMAGE', 'VIDEO', 'FILE'].includes(col.type)}
+            <FileUploader
+              {col} 
+              value={formData[col.name]} 
+              uploading={uploading === col.name}
+              on:change={(e) => handleFileChange(e.detail.files, col.name)}
+              on:clear={(e) => clearFile(col.name, e.detail.index)}
+            /> -->
 
-          {:else if col.type === 'ARRAY'}
+            {:else if ['IMAGE', 'VIDEO', 'FILE'].includes(col.type)}
+            <FileUploader
+              {col} 
+              value={formData[col.name]} 
+              uploading={uploading === col.name}
+              on:change={(e) => handleFileChange(e.detail.files, col.name)}
+              on:clear={(e) => handleFileRemoval(col.name, e.detail.index)}
+            />
+
+          
+          
+            {:else if col.type === 'ARRAY'}
             <input type="text" placeholder="e.g. Kotlin, Java, Go" class="input-base" class:input-error={externalErrors[col.name]}
               value={Array.isArray(formData[col.name]) ? formData[col.name].join(', ') : ''}
               on:input={(e) => formData[col.name] = e.currentTarget.value.split(',').map((s: string) => s.trim()).filter(Boolean)} /> 
 
-              {:else if col.type === 'JSON' || col.type === 'TEXTAREA'}
-                          <textarea bind:value={formData[col.name]} rows={6} class="input-base font-mono text-sm"
-                            class:input-error={externalErrors[col.name]}
-                            placeholder={col.type === 'JSON' ? '{"key": "value"}' : 'Write here...'}></textarea>
+          {:else if col.type === 'JSON' || col.type === 'TEXTAREA'}
+            <textarea bind:value={formData[col.name]} rows={6} class="input-base font-mono text-sm"
+              class:input-error={externalErrors[col.name]}
+              placeholder={col.type === 'JSON' ? '{"key": "value"}' : 'Write here...'}></textarea>
 
-             
-                          {:else if col.type === 'WYSIWYG'}
-  <WYSIWYG 
-    value={formData[col.name]} 
-    config={col.wysiwygConfig} 
-    onChange={(html) => formData[col.name] = html} 
-  />
-
-              {:else if col.type === 'OBJECT'}
+          {:else if col.type === 'WYSIWYG'}
+            <WYSIWYG 
+              value={formData[col.name]} 
+              config={col.wysiwygConfig} 
+              onChange={(html) => formData[col.name] = html} 
+            />
 
           {:else if col.type === 'OBJECT'}
             <EmbeddedObjectInput
@@ -493,7 +399,7 @@
     </div>
 
     <div class="form-footer">
-      <button type="button" on:click={() => window.history.back()} class="btn-cancel">Cancel</button>
+      <button type="button" on:click={handleCancel} class="btn-cancel">Cancel</button>
       <button type="button" on:click={triggerSubmit} class="btn-submit">{submitLabel} {resourceName}</button>
     </div>
   </div>
@@ -524,7 +430,6 @@
   .color-swatch { width: 3rem; height: 3rem; border: 1px solid #27272a; border-radius: 0.5rem; background: none; cursor: pointer; padding: 0; }
   .range-input { width: 100%; accent-color: #3b82f6; cursor: pointer; }
 
-  .embedded-form-box { padding: 1.25rem; background: #0c0c0e; border: 1px dashed #27272a; border-radius: 0.5rem; }
   .form-footer { padding: 1.5rem 2rem; background-color: #09090b; border-top: 1px solid #27272a; display: flex; justify-content: flex-end; gap: 1rem; }
 
   .btn-submit { padding: 0.625rem 1.5rem; background-color: #3b82f6; color: white; font-weight: 600; border-radius: 0.5rem; border: none; cursor: pointer; }
@@ -545,7 +450,4 @@
 
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
   .animate-in { animation: fadeIn 0.2s ease-out forwards; }
-
-  /* Style overrides for custom rich text input surfaces */
-
 </style>
