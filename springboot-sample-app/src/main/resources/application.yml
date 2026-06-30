@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: kraft-admin
   h2:
     console:
       enabled: true
@@ -12,6 +14,15 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+    codec:
+      # Configures the max memory pool size allowed to buffer incoming parts in a reactive stream
+      # 100MB example limit (adjust as needed; avoid setting it to arbitrary massive sizes to protect against DOS)
+      max-in-memory-size: 100MB
 
 kraftpulse:
   enabled: true
@@ -65,3 +76,6 @@ kraftpulse:
   telemetry-config:
     cloud-url: "http://localhost:8090"
     enabled: true
+    provider: LOCAL
+    apiKey: "kp_live_7956aca23cb24cce816dd6b38d2b7f6a"
+    secretKey: "Ku8KQdhr1mdZ-giCv06g9LDtrEAnk5dq9Men-jh-ecI"

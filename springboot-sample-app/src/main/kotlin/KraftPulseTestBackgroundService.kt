@@ -27,17 +27,16 @@ class KraftPulseTestBackgroundService(
         try {
             logger.info("Triggering database read via VenueRepository...")
             val venues = repository.findAll()
-            logger.info("Database Read Success. Found ${venues.size} venues recorded.")
+//            logger.info("Database Read Success. Found ${venues.size} venues recorded.")
         } catch (e: Exception) {
-            logger.error("Telemetry Database Intercept Failed: ${e.message}", e)
+            logger.error("Telemetry Database Intercept Failed: ${e.message}")
         }
 
         // TEST OUTBOUND HTTP CALL VIA INTERCEPTED RESTTEMPLATE
         try {
             val targetUrl = "https://jsonplaceholder.typicode.com/todos/1"
-            logger.info("🌐 Triggering outbox telemetry RestTemplate fetch target: $targetUrl")
+//            logger.info("Triggering outbox telemetry RestTemplate fetch target: $targetUrl")
             val response = restTemplate.getForObject(targetUrl, String::class.java)
-            logger.debug("Outbound Response payload length: ${response?.length ?: 0}")
         } catch (e: Exception) {
             logger.warn("Outbound HTTP call failed or timed out: ${e.message}")
         }
@@ -52,6 +51,8 @@ class KraftPulseTestBackgroundService(
                 NoSuchElementException("Venue record not found for ID: $missingId in BaseEntity auditing module.")
             }
         }
+
+
     }
 
     fun publishTestEvent(msg: String) {
