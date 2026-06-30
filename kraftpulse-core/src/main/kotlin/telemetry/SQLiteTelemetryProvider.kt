@@ -24,7 +24,8 @@ import kotlin.use
 
 class SQLiteTelemetryProvider(
     private val appName: String = "default-app",
-    val serializer: KraftJsonSerializer
+    val serializer: KraftJsonSerializer,
+    private val enabled: Boolean = true
 ) {
     private val logger: Logger = LoggerFactory.getLogger(SQLiteTelemetryProvider::class.java)
 
@@ -44,9 +45,19 @@ class SQLiteTelemetryProvider(
         dir.absolutePath + File.separator + "telemetry.db"
     }
 
+
+//    init {
+//        if(enabled) {
+//            //  Now dbPath is guaranteed to be initialized
+//            migrateSchema(dbPath)
+//            this.connection = DriverManager.getConnection("jdbc:sqlite:$dbPath?journal_mode=WAL")
+//        }
+//    }
+
     init {
-        //  Now dbPath is guaranteed to be initialized
-        migrateSchema(dbPath)
+        if (enabled) {
+            migrateSchema(dbPath)
+        }
         this.connection = DriverManager.getConnection("jdbc:sqlite:$dbPath?journal_mode=WAL")
     }
 
