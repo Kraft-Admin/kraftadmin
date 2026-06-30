@@ -3,15 +3,6 @@ package interceptors
 import model.PulseContext
 import model.QueryEvent
 
-//interface QueryPulseInterceptor {
-//    /**
-//     * Intercepts a database operation.
-//     * @param context metadata like tenantId, traceId, or calling method
-//     * @param event the actual query details (SQL/Command, parameters, timing)
-//     */
-//    fun onQuery(context: PulseContext, event: QueryEvent)
-//}
-
 interface QueryPulseInterceptor {
     /**
      * Called after every database query completes (success or failure).
