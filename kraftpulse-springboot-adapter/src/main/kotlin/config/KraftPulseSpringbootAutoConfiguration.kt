@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -106,8 +107,15 @@ class KraftPulseSpringbootAutoConfiguration(
         return KraftSpringMonitoringController(telemetryService )
     }
 
+//    @Bean
+//    @ConditionalOnMissingBean(ErrorAttributes::class)
+//    fun kraftPulseErrorAttributes(sink: KraftTelemetryService): ErrorAttributes {
+//        return KraftPulseErrorAttributes(sink)
+//    }
+
     @Bean
     @ConditionalOnMissingBean(ErrorAttributes::class)
+    @ConditionalOnClass(ErrorAttributes::class)
     fun kraftPulseErrorAttributes(sink: KraftTelemetryService): ErrorAttributes {
         return KraftPulseErrorAttributes(sink)
     }
