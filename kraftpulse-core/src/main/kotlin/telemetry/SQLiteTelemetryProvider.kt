@@ -66,6 +66,7 @@ class SQLiteTelemetryProvider(
         val flyway = Flyway.configure()
             .dataSource("jdbc:sqlite:$path", null, null)
             .javaMigrations(V1__InitSqliteDB())
+            .locations("filesystem:nothing")
             .baselineOnMigrate(true)
             .load()
 
