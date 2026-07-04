@@ -1,11 +1,6 @@
 package com.kraftadmin.controller
 
 
-import security.AdminRequest
-import security.AdminSessionStore
-import security.NoFrameworkSecurityCondition
-import security.SecurityProviderChain
-import security.SessionConfig
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -18,7 +13,8 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.util.Base64
+import security.*
+import java.util.*
 
 /**
  * Handles login and logout for library-managed authentication.
@@ -39,7 +35,6 @@ import java.util.Base64
  */
 @RestController
 @RequestMapping("\${kraftadmin.base-path:/admin}/api/auth")
-//@ConditionalOnExpression("!T(config.KraftAdminSpringSecurityConfig).isSpringSecurityActive()")
 @Conditional(NoFrameworkSecurityCondition::class)
 @ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
 class KraftAdminSpringbootAuthController(
@@ -119,12 +114,9 @@ class KraftAdminSpringbootAuthController(
 }
 
 
-data class LoginRequest(
-    val username: String = "",
-    val password: String = ""
-) {
-    override fun toString(): String {
-        // Obfuscate password in logs!
-        return "username: $username, password: [PROTECTED]"
-    }
+class LoginRequest {
+    var username: String = ""
+    var password: String = ""
+
+    override fun toString(): String = "username: $username, password: [PROTECTED]"
 }
