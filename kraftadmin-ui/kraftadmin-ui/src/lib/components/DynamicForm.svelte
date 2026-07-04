@@ -1,304 +1,266 @@
 <script lang="ts">
-  import EmbeddedObjectInput from '../components/EmbeddedObjectInput.svelte';
-  import FileUploader from './FileUploader.svelte';
-  import WYSIWYG from './WYSIWYG.svelte';
- 
+  import { createEventDispatcher } from 'svelte';
+  import FieldRenderer from '../components/inputs/FieldRenderer.svelte';
+
   export let columns: any[] = [];
   export let onSubmit: (data: any) => void;
   export let resourceName: string = "";
-  export let submitLabel: string = "Create ";
+  export let submitLabel: string = "Save";
   export let initialData: any = {};
   export let externalErrors: Record<string, string[]> = {};
 
   let formData: any = {};
-  let searchResults: Record<string, any[]> = {};
-  let searchTerms: Record<string, string> = {};
-  let debounceTimer: any;
-  let activeSearchCol: string | null = null;
   let lastLoadedId: string | null = null;
-  let formError: { message: string; raw?: any } | null = null;
-
   let fields: any[] = [];
   let lastColumnsJson = '';
+
+  // ✅ Track which URLs were uploaded during THIS session
+  // so cancel knows what to clean up
+  let sessionUploadedUrls = new Set<string>();
+
+  // ✅ Track original file URLs from initialData so we never
+  // delete files that existed before this edit session started
+  let originalFileUrls = new Set<string>();
+
   $: {
-    try {
-      const json = JSON.stringify(columns);
-      if (json !== lastColumnsJson) {
-        lastColumnsJson = json;
-        fields = columns.filter(c => c.visible && !['id', 'createdAt', 'updatedAt', 'deletedAt'].includes(c.name));
-      }
-    } catch (e: any) {
-      formError = { message: 'Failed to process column definitions', raw: e?.message };
+    const json = JSON.stringify(columns);
+    if (json !== lastColumnsJson) {
+      lastColumnsJson = json;
+      fields = columns.filter(
+        c => c.visible && !['id', 'createdAt', 'updatedAt', 'deletedAt'].includes(c.name)
+      );
     }
   }
+
+  $: if (columns?.length > 0) {
+    const currentId = initialData?.id || 'new';
+    if (currentId !== lastLoadedId) {
+      formData = buildFormData(columns, initialData);
+      lastLoadedId = currentId;
+
+      // ✅ Snapshot original file URLs so cancel doesn't delete pre-existing files
+      originalFileUrls = new Set(collectFileUrls(formData));
+      sessionUploadedUrls = new Set(); // reset on new record load
+    }
+  }
+
+  $: if (initialData?.id) submitLabel = "Update";
+
+  // ─── File URL collection helpers ─────────────────────────────────────────
+
+  function collectFileUrls(data: Record<string, any>): string[] {
+    const urls: string[] = [];
+    columns.forEach(col => {
+      if (['IMAGE', 'VIDEO', 'FILE', 'AUDIO', 'DOCUMENT'].includes(col.type)) {
+        const val = data[col.name];
+        if (typeof val === 'string' && val) urls.push(val);
+        if (Array.isArray(val)) val.filter(Boolean).forEach(v => urls.push(v));
+      } else if (col.type === 'OBJECT' && col.subColumns) {
+        const obj = data[col.name] ?? {};
+        col.subColumns.forEach((sub: any) => {
+          if (['IMAGE', 'VIDEO', 'FILE', 'AUDIO', 'DOCUMENT'].includes(sub.type)) {
+            const val = obj[sub.name];
+            if (typeof val === 'string' && val) urls.push(val);
+          }
+        });
+      }
+    });
+    return urls.filter(Boolean);
+  }
+
+  async function deleteUrl(url: string) {
+    try {
+      await fetch('/admin/api/uploads', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+    } catch (e) {
+      console.error('[DynamicForm] Failed to delete uploaded file:', url, e);
+    }
+  }
+
+  // ─── Cancel — delete session-uploaded files that weren't originally there ──
+
+  async function handleCancel() {
+    // Only delete URLs that were uploaded in this session AND
+    // weren't part of the original data (i.e. new uploads only)
+    const toDelete = [...sessionUploadedUrls].filter(url => !originalFileUrls.has(url));
+
+    if (toDelete.length > 0) {
+      await Promise.all(toDelete.map(deleteUrl));
+    }
+
+    window.history.back();
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
 
   function arrayToDatetimeLocal(arr: any[]): string {
     const [y, m, d, hh = 0, mm = 0] = arr;
     return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   }
 
-  function isSafeValue(type: string, val: any): boolean {
-    if (val === null || val === undefined || val === '') return true;
-    switch (type) {
-      case 'TEXT': case 'TEXTAREA': case 'WYSIWYG': case 'JSON': case 'SELECT': case 'EMAIL': case 'URL': case 'PASSWORD': case 'TEL':
-        return typeof val === 'string';
-      case 'NUMBER': case 'RANGE':
-        return typeof val === 'number';
-      case 'CHECKBOX':
-        return typeof val === 'boolean';
-      case 'DATETIME': case 'DATE': case 'TIME':
-        return typeof val === 'string';
-      case 'ARRAY': case 'MULTI_SELECT': case 'MULTI_RELATION':
-        return Array.isArray(val);
-      case 'RELATION':
-        return typeof val === 'string' || val === null;
-      case 'OBJECT':
-        return typeof val === 'object' && !Array.isArray(val);
-      case 'IMAGE': case 'VIDEO': case 'FILE':
-        return typeof val === 'string';
-      default:
-        return true;
-    }
+  function arrayToDate(arr: any[]): string {
+    const [y, m, d] = arr;
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
 
-  $: if(initialData && initialData.id){
-    submitLabel = "Update ";
-  }
+  function buildFormData(cols: any[], data: any): Record<string, any> {
+    const values = data?.values || {};
+    const result: Record<string, any> = { id: data?.id ?? null };
 
-  $: if (columns && columns.length > 0) {
-    try {
-      const currentId = initialData?.id || 'new';
-      if (currentId !== lastLoadedId) {
-        const newData: any = {};
-        const values = initialData.values || {};
-        columns.forEach(col => {
-          try {
-            const existingValue = values[col.name] ?? null;
-            if (col.type === 'OBJECT') {
-              newData[col.name] = {};
-              const dataSource = existingValue?.data ?? existingValue ?? {};
-              col.subColumns?.forEach((sub: any) => {
-                const rawSubValue = dataSource[sub.name] ?? null;
-                newData[col.name][sub.name] = (Array.isArray(rawSubValue) && sub.type === 'DATETIME') ? arrayToDatetimeLocal(rawSubValue) : (rawSubValue ?? sub.defaultValue ?? "");
-              });
-            } else if (col.type === 'DATETIME') {
-              newData[col.name] = Array.isArray(existingValue) ? arrayToDatetimeLocal(existingValue) : (existingValue ?? "");
-            } else if (col.type === 'DATE') {
-              newData[col.name] = Array.isArray(existingValue) ? `${existingValue[0]}-${String(existingValue[1]).padStart(2, '0')}-${String(existingValue[2]).padStart(2, '0')}` : (existingValue ?? "");
-            } else if (col.type === 'TIME') {
-              newData[col.name] = (typeof existingValue === 'string') ? (existingValue.includes('T') ? existingValue.split('T')[1].substring(0, 5) : existingValue.substring(0, 5)) : "";
-            } else if (col.type === 'RELATION') {
-              newData[col.name] = (existingValue && typeof existingValue === 'object') ? existingValue.id : (existingValue ?? null);
-              if (existingValue?.displayField && !searchTerms[col.name]) searchTerms[col.name] = existingValue.displayField;
-            } else if (col.type === 'MULTI_RELATION') {
-              newData[col.name] = Array.isArray(existingValue) ? existingValue.map(item => (typeof item === 'object' ? item.id : item)) : [];
-              if (Array.isArray(existingValue)) existingValue.forEach(item => { if (item?.id) searchTerms[`${col.name}_${item.id}`] = item.displayField || item.name || item.id; });
-            } else if (col.type === 'ARRAY' || col.type === 'MULTI_SELECT') {
-              newData[col.name] = Array.isArray(existingValue) ? existingValue : (typeof existingValue === 'string' ? existingValue.split(',').map(s => s.trim()).filter(Boolean) : []);
-            } else if (col.type === 'NUMBER' || col.type === 'RANGE') {
-              newData[col.name] = typeof existingValue === 'number' ? existingValue : (existingValue ?? 0);
-            } else if (col.type === 'CHECKBOX') {
-              newData[col.name] = typeof existingValue === 'boolean' ? existingValue : false;
-            } else {
-              newData[col.name] = (existingValue !== null && typeof existingValue === 'object') ? (Array.isArray(existingValue) ? existingValue.join(', ') : (existingValue.displayField ?? existingValue.id ?? JSON.stringify(existingValue))) : (existingValue ?? col.defaultValue ?? "");
-            }
-          } catch (e) { newData[col.name] = null; }
-        });
-        formData = newData;
-        lastLoadedId = currentId;
+    cols.forEach(col => {
+      try {
+        const raw = values[col.name] ?? null;
+        switch (col.type) {
+          case 'OBJECT': {
+            const src = raw?.data ?? raw ?? {};
+            result[col.name] = {};
+            col.subColumns?.forEach((sub: any) => {
+              const subRaw = src[sub.name] ?? null;
+              if (Array.isArray(subRaw) && sub.type === 'DATETIME') {
+                result[col.name][sub.name] = arrayToDatetimeLocal(subRaw);
+              } else if (Array.isArray(subRaw) && sub.type === 'DATE') {
+                result[col.name][sub.name] = arrayToDate(subRaw);
+              } else {
+                result[col.name][sub.name] = subRaw ?? sub.defaultValue ?? '';
+              }
+            });
+            break;
+          }
+          case 'DATETIME':
+            result[col.name] = Array.isArray(raw) ? arrayToDatetimeLocal(raw) : (raw ?? '');
+            break;
+          case 'DATE':
+            result[col.name] = Array.isArray(raw) ? arrayToDate(raw) : (raw ?? '');
+            break;
+          case 'TIME':
+            result[col.name] = typeof raw === 'string'
+              ? (raw.includes('T') ? raw.split('T')[1].substring(0, 5) : raw.substring(0, 5))
+              : '';
+            break;
+          case 'RELATION':
+            result[col.name] = raw && typeof raw === 'object' && !Array.isArray(raw)
+              ? (raw.id ?? null)
+              : (raw ?? null);
+            break;
+          case 'MULTI_RELATION':
+            result[col.name] = Array.isArray(raw)
+              ? raw.map((i: any) => typeof i === 'object' ? (i.id ?? i) : i)
+              : [];
+            break;
+          case 'NUMBER':
+          case 'RANGE':
+            result[col.name] = typeof raw === 'number' ? raw : (raw ?? 0);
+            break;
+          case 'CHECKBOX':
+            result[col.name] = typeof raw === 'boolean' ? raw : false;
+            break;
+          case 'ARRAY':
+          case 'MULTI_SELECT':
+            result[col.name] = Array.isArray(raw)
+              ? raw
+              : (typeof raw === 'string' && raw
+                  ? raw.split(',').map((s: string) => s.trim()).filter(Boolean)
+                  : []);
+            break;
+          default:
+            result[col.name] = raw !== null && typeof raw === 'object'
+              ? (Array.isArray(raw) ? raw.join(', ') : (raw.displayField ?? raw.id ?? JSON.stringify(raw)))
+              : (raw ?? col.defaultValue ?? '');
+        }
+      } catch (e) {
+        console.error(`[DynamicForm] Failed to map field "${col.name}" (${col.type}):`, e);
+        result[col.name] = null;
       }
-    } catch (e) { formError = { message: 'Failed to initialize form', raw: e }; }
+    });
+
+    return result;
   }
 
-  async function fetchLookups(lookup: any, colName: string, query: string) {
-    if (!lookup?.targetEntity || !query) { searchResults[colName] = []; return; }
-    try {
-      const res = await fetch(`/admin/api/resources/${lookup.targetEntity}/lookup/${lookup.searchField || 'name'}?search=${encodeURIComponent(query)}`);
-      if (res.ok) searchResults[colName] = await res.json();
-    } catch (e) { console.error("Lookup failed", e); }
+  // ─── Event handlers ──────────────────────────────────────────────────────
+
+  function handleFieldChange(colName: string, value: any) {
+    formData = { ...formData, [colName]: value };
   }
 
-  function handleSearchInput(e: Event, col: any) {
-    const query = (e.target as HTMLInputElement).value;
-    searchTerms[col.name] = query;
-    activeSearchCol = col.name;
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => fetchLookups(col.lookup, col.name, query), 300);
-  }
-
-  function selectSingle(col: any, option: any) {
-    formData[col.name] = option.id;
-    searchTerms[col.name] = option.displayField || option.name;
-    activeSearchCol = null;
-  }
-
-  function selectMulti(col: any, option: any) {
-    const current = formData[col.name] || [];
-    if (!current.includes(option.id)) {
-      formData[col.name] = [...current, option.id];
-      searchTerms[`${col.name}_${option.id}`] = option.displayField || option.name;
+  function handleFileClear(colName: string, index: number | null) {
+    const current = formData[colName];
+    // ✅ When a file is removed from the form, also remove from session tracking
+    // so cancel doesn't try to delete something already gone
+    if (typeof current === 'string') {
+      sessionUploadedUrls.delete(current);
+    } else if (Array.isArray(current) && index !== null) {
+      sessionUploadedUrls.delete(current[index]);
     }
-    searchTerms[col.name] = "";
-    searchResults[col.name] = [];
-  }
 
-  function removeTag(colName: string, id: any) {
-    formData[colName] = formData[colName].filter((existingId: any) => existingId !== id);
-  }
-
-  let uploading: string | null = null;
-
-  async function handleFileChange(files: FileList, fieldName: string) {
-    if (!files || files.length === 0) return;
-    const col = columns.find(c => c.name === fieldName);
-    const isMultiple = col?.fileConfig?.multiple ?? false;
-    uploading = fieldName;
-    const fd = new FormData();
-    if (isMultiple) { Array.from(files).forEach(f => fd.append('files', f)); } 
-    else { fd.append('file', files[0]); if (formData[fieldName]) fd.append('oldUrl', formData[fieldName]); }
-    try {
-      const response = await fetch('/admin/api/uploads', { method: 'POST', body: fd });
-      if (!response.ok) throw new Error('Upload failed');
-      const result = await response.json();
-      formData[fieldName] = isMultiple ? [...(formData[fieldName] || []), ...result.urls] : result.url;
-    } finally { uploading = null; }
-  }
-  
-  async function deleteFileFromServer(url: string) {
-    try { await fetch('/admin/api/uploads', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }); } catch (err) { console.error(err); }
-  }
-
-  async function handleFileRemoval(fieldName: string, index: number | null) {
-    const val = formData[fieldName];
-    if (Array.isArray(val)) {
-      const url = val[index!];
-      if (url) await deleteFileFromServer(url);
-      formData[fieldName] = val.filter((_, i) => i !== index);
+    if (Array.isArray(current)) {
+      formData = { ...formData, [colName]: current.filter((_: any, i: number) => i !== index) };
     } else {
-      if (val) await deleteFileFromServer(val);
-      formData[fieldName] = null;
+      formData = { ...formData, [colName]: null };
     }
   }
 
-  async function handleCancel() {
-    for (const col of columns) {
-      if (['IMAGE', 'VIDEO', 'FILE'].includes(col.type) && formData[col.name]) {
-        const val = formData[col.name];
-        if (Array.isArray(val)) { for (const url of val) await deleteFileFromServer(url); } 
-        else { await deleteFileFromServer(val); }
-      }
-    }
-    window.history.back();
+  // ✅ Called by FieldRenderer when FileUploader completes an upload
+  function handleFileUploaded(colName: string, url: string) {
+    sessionUploadedUrls = new Set([...sessionUploadedUrls, url]);
   }
 
-  const triggerSubmit = () => onSubmit(formData);
+  function handleSubmit() {
+    // On successful submit, clear session tracking — files are now saved
+    sessionUploadedUrls = new Set();
+    onSubmit(formData);
+  }
 </script>
 
-{#if formError}
-  <div class="form-container">
-    <div class="text-danger font-bold mb-2">⚠ Form Error</div>
-    <p class="text-text-muted text-sm">{formError.message}</p>
-    {#if formError.raw}
-      <pre class="bg-bg-main text-danger p-4 rounded-lg text-[11px] mt-4 overflow-x-auto">{formError.raw}</pre>
-    {/if}
-    <button type="button" on:click={() => formError = null} class="btn-secondary mt-4 text-xs">
-      Try Anyway
+<div class="form-container !p-0">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-8">
+    {#each fields as col (col.name)}
+      {@const colErrors = externalErrors[col.name]}
+      {@const isWide = [
+        'TEXTAREA','JSON','OBJECT','ARRAY','WYSIWYG',
+        'RELATION','MULTI_RELATION','VIDEO','IMAGE',
+        'FILE','AUDIO','DOCUMENT'
+      ].includes(col.type)}
+
+      <div class="flex flex-col gap-1.5 {isWide ? 'md:col-span-2' : ''}">
+        <label class="field-label">
+          {col.label}
+          {#if col.required}<span class="text-danger">*</span>{/if}
+        </label>
+
+        <FieldRenderer
+          {col}
+          value={formData[col.name]}
+          error={colErrors}
+          on:change={(e) => handleFieldChange(col.name, e.detail.value)}
+          on:fileclear={(e) => handleFileClear(col.name, e.detail.index)}
+          on:fileuploaded={(e) => handleFileUploaded(col.name, e.detail.url)}
+        />
+
+        {#if colErrors?.length}
+          <div class="flex flex-col gap-0.5 mt-0.5">
+            {#each colErrors as err}
+              <span class="text-danger text-[10px] font-bold uppercase tracking-tight flex items-center gap-1">
+                <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                {err}
+              </span>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/each}
+  </div>
+
+  <div class="form-footer px-8">
+    <button type="button" on:click={handleCancel} class="btn-secondary">
+      Cancel
+    </button>
+    <button type="button" on:click={handleSubmit} class="btn-primary">
+      {submitLabel} {resourceName}
     </button>
   </div>
-{:else}
-  <div class="form-container !p-0">
-    <div class="grid grid-cols-1 md:grid-cols-2 p-8 gap-6">
-      {#each fields as col (col.name)}
-        {@const error = externalErrors[col.name]}
-        <div class="flex flex-col gap-1.5 {['TEXTAREA', 'JSON', 'OBJECT', 'ARRAY', 'WYSIWYG', 'RELATION', 'MULTI_RELATION', 'VIDEO', 'IMAGE', 'FILE', 'AUDIO', 'DOCUMENT'].includes(col.type) ? 'md:col-span-2' : ''}">
-          
-          <label class="field-label">
-            {col.label}
-            {#if col.required}<span class="req-star">*</span>{/if}
-          </label>
-
-          {#if col.type === 'CHECKBOX'}
-            <button type="button" on:click={() => formData[col.name] = !formData[col.name]}
-              class="w-11 h-6 rounded-full relative transition-colors {formData[col.name] ? 'bg-brand-primary' : 'bg-border-subtle'}">
-              <div class="absolute top-1 left-1 bg-bg-surface w-4 h-4 rounded-full transition-transform {formData[col.name] ? 'translate-x-5' : ''}"></div>
-            </button>
-
-          {:else if col.type === 'RADIO'}
-            <div class="flex flex-wrap gap-4 py-2">
-              {#each col.selectOptions || [] as opt}
-                <label class="flex items-center gap-2 cursor-pointer text-text-main">
-                  <input type="radio" bind:group={formData[col.name]} value={opt.value} />
-                  <span class="text-sm">{opt.label}</span>
-                </label>
-              {/each}
-            </div>
-
-          {:else if col.type === 'MULTI_SELECT'}
-  <select multiple bind:value={formData[col.name]} class="input-base {error ? 'input-error' : ''}">
-    {#each col.selectOptions || [] as opt}
-      <option value={opt.value}>{opt.label}</option>
-    {/each}
-  </select>
-
-{:else if col.type === 'SELECT'}
-  <select bind:value={formData[col.name]} class="input-base {error ? 'input-error' : ''}">
-    <option value={null}>Select {col.label}...</option>
-    {#each col.selectOptions || [] as opt}
-      <option value={opt.value}>{opt.label}</option>
-    {/each}
-  </select>
-
-          {:else if col.type === 'RELATION'}
-            <input type="text" class="input-base {error ? 'input-error' : ''}" placeholder="Search..." bind:value={searchTerms[col.name]} on:input={(e) => handleSearchInput(e, col)} />
-
-          {:else if col.type === 'MULTI_RELATION'}
-            <div class="input-base min-h-[42px] flex flex-wrap gap-2 {error ? 'input-error' : ''}">
-              {#each (formData[col.name] || []) as itemId}
-                <div class="chip">
-                  {searchTerms[`${col.name}_${itemId}`] || itemId}
-                  <button type="button" on:click={() => removeTag(col.name, itemId)}>&times;</button>
-                </div>
-              {/each}
-              <input type="text" class="bg-transparent border-none outline-none flex-1 min-w-[120px]" placeholder="Search..." bind:value={searchTerms[col.name]} on:input={(e) => handleSearchInput(e, col)} />
-            </div>
-
-          {:else if col.type === 'COLOR'}
-            <div class="flex gap-2">
-              <input type="color" bind:value={formData[col.name]} class="h-10 w-10 rounded-lg border border-border-subtle cursor-pointer" />
-              <input type="text" bind:value={formData[col.name]} class="input-base font-mono {error ? 'input-error' : ''}" />
-            </div>
-
-          {:else if ['NUMBER', 'DATE', 'DATETIME', 'TIME', 'RANGE'].includes(col.type)}
-            <input type={col.type === 'RANGE' ? 'range' : col.type.toLowerCase()} bind:value={formData[col.name]} class="input-base {error ? 'input-error' : ''}" />
-
-          {:else if ['IMAGE', 'VIDEO', 'FILE', 'AUDIO', 'DOCUMENT'].includes(col.type)}
-            <FileUploader {col} value={formData[col.name]} uploading={uploading === col.name} on:change={(e) => handleFileChange(e.detail.files, col.name)} on:clear={(e) => handleFileRemoval(col.name, e.detail.index)} />
-
-          {:else if col.type === 'WYSIWYG'}
-            <WYSIWYG value={formData[col.name]} config={col.wysiwygConfig} onChange={(html) => formData[col.name] = html} />
-
-          {:else if col.type === 'OBJECT'}
-            <EmbeddedObjectInput label={col.label} subColumns={col.subColumns} bind:value={formData[col.name]} />
-
-          {:else if ['JSON', 'TEXTAREA', 'ARRAY'].includes(col.type)}
-            <textarea bind:value={formData[col.name]} rows={6} class="input-base !h-auto {error ? 'input-error' : ''}"></textarea>
-
-          {:else}
-            <input type="text" bind:value={formData[col.name]} class="input-base {error ? 'input-error' : ''}" />
-          {/if}
-
-          {#if error}
-            <div class="text-danger text-[10px] font-bold uppercase">{error[0]}</div>
-          {/if}
-        </div>
-      {/each}
-    </div>
-
-    <div class="form-footer px-8">
-      <button type="button" on:click={handleCancel} class="btn-secondary">Cancel</button>
-      <button type="button" on:click={triggerSubmit} class="btn-primary">
-        {submitLabel} {resourceName}
-      </button>
-    </div>
-  </div>
-{/if}
+</div>
