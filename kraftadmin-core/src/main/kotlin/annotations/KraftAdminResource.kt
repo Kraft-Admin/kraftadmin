@@ -2,7 +2,7 @@ package com.kraftadmin.annotations
 
 /**
  * Marks a class as a manageable KraftAdmin resource.
- * * This annotation is the entry point for the KraftAdmin engine. Any class decorated with
+ * This annotation is the entry point for the KraftAdmin engine. Any class decorated with
  * @KraftAdminResource will be automatically scanned and exposed via the Admin UI,
  * provided it is registered within the Runtime Config.
  *
@@ -18,6 +18,11 @@ package com.kraftadmin.annotations
  * in the table view.
  * @property defaultSort Defines the initial data ordering.
  * Syntax: "fieldName:DIRECTION" (e.g., "id:DESC").
+ * @property readOnly If true, disables creation, update, and delete operations in the UI.
+ * @property pageSize Defines the number of records to display per page in the table view.
+ * @property permissionScope Defines the required security role or permission scope needed
+ * to access this resource (e.g., "ROLE_ADMIN").
+ * @property exportable If true, enables the CSV/Excel export functionality in the table view.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
@@ -27,5 +32,9 @@ annotation class KraftAdminResource(
     val icon: String = "📁",
     val hidden: Boolean = false,
     val searchable: Boolean = true,
-    val defaultSort: String = ""
+    val defaultSort: String = "",
+    val readOnly: Boolean = false,
+    val pageSize: Int = 20,
+    val permissionScope: String = "ALL",
+    val exportable: Boolean = true
 )

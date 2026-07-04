@@ -13,7 +13,16 @@ import kotlin.reflect.KClass
 abstract class AbstractResource<T : Any>(
     override val name: String,
     override val label: String,
-    override val entityClass: KClass<T>
+    override val entityClass: KClass<T>,
+    override val group: String = "Main",
+    override val icon: String = "📁",
+    override val isHidden: Boolean = false,
+    override val isSearchable: Boolean = true,
+    override val defaultSort: String = "",
+    override val isReadOnly: Boolean = false,
+    override val pageSize: Int = 20,
+    override val permissionScope: String = "ALL",
+    override val isExportable: Boolean = true
 ) : KraftAdminResource<T> {
     override var dataProvider: KraftDataProvider<T>? = null
 
