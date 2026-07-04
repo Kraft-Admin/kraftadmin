@@ -1,6 +1,5 @@
 package com.kraftadmin.ui_descriptors
 
-import com.kraftadmin.annotations.RichTextConfig
 import com.kraftadmin.spi.SelectOption
 import kotlin.reflect.KClass
 
@@ -28,20 +27,60 @@ data class ColumnDescriptor(
 /**
  * Clean POJO representation of the UI configuration parameters
  */
-data class WYSIWYGOptions(
-    val toolbar: String,
-    val placeholder: String? = null,
-    val options: List<List<Any>> = listOf(),
-)
+//data class WYSIWYGOptions(
+//    val toolbar: String,
+//    val placeholder: String? = null,
+//    val options: List<List<Any>> = listOf(),
+//)
+class WYSIWYGOptions {
+    var toolbar: String = "MINIMAL"
+    var placeholder: String? = null
+    var options: List<List<Any>> = mutableListOf()
+
+    constructor() // No-arg
+
+    // The precise constructor the compiler expects
+    constructor(toolbar: String, placeholder: String?, options: List<List<Any>>) {
+        this.toolbar = toolbar
+        this.placeholder = placeholder
+        this.options = options
+    }
+}
 
 /**
  * File options UI descriptor with sensible default parameters
  */
-data class FileConfigDescriptor(
-    val multiple: Boolean = false,
-    val maxFiles: Int = 1,
-    val allowedExtensions: List<String> = emptyList(),
-    val minSizeBytes: Long = 0L,
-    val maxSizeBytes: Long = 10 * 1024 * 1024, // 10MB default
-    val allowedMimeTypes: List<String> = emptyList()
-)
+//data class FileConfigDescriptor(
+//    val multiple: Boolean = false,
+//    val maxFiles: Int = 1,
+//    val allowedExtensions: List<String> = emptyList(),
+//    val minSizeBytes: Long = 0L,
+//    val maxSizeBytes: Long = 10 * 1024 * 1024, // 10MB default
+//    val allowedMimeTypes: List<String> = emptyList()
+//)
+
+class FileConfigDescriptor {
+    var multiple: Boolean = false
+    var maxFiles: Int = 1
+    var allowedExtensions: List<String> = mutableListOf()
+    var minSizeBytes: Long = 0L
+    var maxSizeBytes: Long = 10 * 1024 * 1024
+    var allowedMimeTypes: List<String> = mutableListOf()
+
+    constructor()
+
+    constructor(allowedExtensions: List<String>, allowedMimeTypes: List<String>) {
+        this.allowedExtensions = allowedExtensions
+        this.allowedMimeTypes = allowedMimeTypes
+    }
+
+    constructor(multiple: Boolean, maxFiles: Int, allowedExtensions: List<String>,
+                minSizeBytes: Long, maxSizeBytes: Long, allowedMimeTypes: List<String>) {
+        this.multiple = multiple
+        this.maxFiles = maxFiles
+        this.allowedExtensions = allowedExtensions
+        this.minSizeBytes = minSizeBytes
+        this.maxSizeBytes = maxSizeBytes
+        this.allowedMimeTypes = allowedMimeTypes
+    }
+}
