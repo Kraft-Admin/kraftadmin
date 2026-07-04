@@ -1,4 +1,4 @@
-package com.kraftadmin.discovery
+package discovery
 
 import com.kraftadmin.annotations.FileConfig
 import com.kraftadmin.annotations.FileConfigDefaults
@@ -7,7 +7,7 @@ import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.annotations.KraftAdminLookup
 import com.kraftadmin.config.JpaDataProviderFactory
 import com.kraftadmin.enums.FormInputType
-import com.kraftadmin.persistence.jpa.provider.JpaDataProvider
+import persistence.jpa.provider.JpaDataProvider
 import security.SecurityProviderChain
 import com.kraftadmin.spi.AbstractResource
 import com.kraftadmin.spi.KraftAdminResource
@@ -25,7 +25,11 @@ import logging.KraftAdminAuditor
 import telemetry.KraftTelemetryService
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.support.TransactionTemplate
+import java.lang.reflect.Field
 import java.lang.reflect.Modifier
+import java.lang.reflect.ParameterizedType
+import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -41,7 +45,7 @@ object ResourceGenerator {
     private val validationExtractor = JakartaValidationExtractor()
 
     fun <T : Annotation> resolveAnnotation(
-        javaField: java.lang.reflect.Field?,
+        javaField: Field?,
         prop: KProperty<*>?,
         annotationClass: KClass<T>
     ): T? {
@@ -71,7 +75,7 @@ object ResourceGenerator {
     }
 
     private fun isRelationAnnotationPresent(
-        javaField: java.lang.reflect.Field,
+        javaField: Field,
         prop: KProperty<*>,
         annotationClass: KClass<out Annotation>
     ): Boolean {
@@ -88,32 +92,33 @@ object ResourceGenerator {
         val kClass = entityClass.kotlin
         println("\n\n========== GENERATING RESOURCE FOR: ${kClass.simpleName} ==========")
 
+        // Resolve the class-level annotation
+        val adminRes = entityClass.getAnnotation(com.kraftadmin.annotations.KraftAdminResource::class.java)
+
+        // Fallback logic: Use annotation values if present, otherwise default to simpleName
+        val label = adminRes?.label?.ifBlank { kClass.simpleName ?: "Unknown" } ?: kClass.simpleName ?: "Unknown"
+
         val resource = object : AbstractResource<T>(
+//            name = kClass.simpleName ?: "Unknown",
+//            label = kClass.simpleName ?: "Unknown",
+//            entityClass = kClass
             name = kClass.simpleName ?: "Unknown",
-            label = kClass.simpleName ?: "Unknown",
-            entityClass = kClass
+            label = adminRes?.label?.ifBlank { kClass.simpleName ?: "Unknown" } ?: kClass.simpleName ?: "Unknown",
+            entityClass = kClass,
+            group = adminRes?.group ?: "Main",
+            icon = adminRes?.icon ?: "📁",
+            isHidden = adminRes?.hidden ?: false,
+            isSearchable = adminRes?.searchable ?: true,
+            defaultSort = adminRes?.defaultSort ?: "",
+            isReadOnly = adminRes?.readOnly ?: false,
+            pageSize = adminRes?.pageSize ?: 20,
+            permissionScope = adminRes?.permissionScope ?: "ALL",
+            isExportable = adminRes?.exportable ?: true
         ) {
+            val resource = adminRes
             init {
                 kClass.memberProperties.forEach { prop ->
                     val javaField = prop.javaField ?: return@forEach
-
-//                    println("\n--- PROP: ${kClass.simpleName}.${prop.name} ---")
-//
-//                    // === STEP 1: Resolve javaField ===
-//                    val javaField = prop.javaField
-//                    println("  javaField: ${javaField?.name ?: "NULL"}")
-//                    if (javaField == null) {
-//                        println("  SKIP: javaField is null")
-//                        return@forEach
-//                    }
-//
-//                    // === STEP 2: Dump ALL annotations ===
-//                    println("  [Java field annotations]:")
-//                    javaField.annotations.forEach { println("    - $it") }
-//                    println("  [Kotlin prop.annotations]:")
-//                    prop.annotations.forEach { println("    - $it") }
-//                    println("  [Kotlin getter annotations]:")
-//                    prop.javaGetter?.annotations?.forEach { println("    - $it") }
 
                     // === STEP 3: Skip transient/static ===
                     if (javaField.isAnnotationPresent(Transient::class.java) || Modifier.isStatic(javaField.modifiers)) {
@@ -138,7 +143,7 @@ object ResourceGenerator {
                         isManyToMany || isOneToMany -> {
                             val resolved = prop.returnType.arguments.firstOrNull()?.type?.classifier as? KClass<*>
                                 ?: run {
-                                    val paramType = javaField.genericType as? java.lang.reflect.ParameterizedType
+                                    val paramType = javaField.genericType as? ParameterizedType
                                     (paramType?.actualTypeArguments?.firstOrNull() as? Class<*>)?.kotlin
                                 }
 //                            println("  targetEntityClass (xToMany via generic): $resolved")
@@ -282,10 +287,15 @@ object ResourceGenerator {
                     val subAdminFieldAnn = resolveAnnotation(javaField, prop, KraftAdminField::class)
                     val subWysiwygConfigValue = if (type == FormInputType.WYSIWYG) {
                         subAdminFieldAnn?.wysiwygConfig?.let { ann ->
+//                            WYSIWYGOptions(
+//                                toolbar = ann.toolbarProfile.name,
+//                                placeholder = ann.placeholder.ifBlank { "Enter ${prop.name}" },
+//                                options = ann.toolbarProfile.toolbarConfig
+//                            )
                             WYSIWYGOptions(
-                                toolbar = ann.toolbarProfile.name,
-                                placeholder = ann.placeholder.ifBlank { "Enter ${prop.name}" },
-                                options = ann.toolbarProfile.toolbarConfig
+                                ann.toolbarProfile.name,
+                                ann.placeholder.ifBlank { "Enter ${prop.name}" },
+                                ann.toolbarProfile.toolbarConfig
                             )
                         }
                     } else null
@@ -384,8 +394,8 @@ object ResourceGenerator {
                     classifier == String::class -> FormInputType.TEXT to ""
                     classifier == Boolean::class -> FormInputType.CHECKBOX to false
                     classifier?.isSubclassOf(Number::class) == true -> FormInputType.NUMBER to 0
-                    classifier == java.time.LocalDate::class -> FormInputType.DATE to null
-                    classifier == java.time.LocalDateTime::class -> FormInputType.DATETIME to null
+                    classifier == LocalDate::class -> FormInputType.DATE to null
+                    classifier == LocalDateTime::class -> FormInputType.DATETIME to null
                     else -> FormInputType.TEXT to null
                 }
             }
@@ -440,4 +450,6 @@ object ResourceGenerator {
 
         return resource
     }
+
+
 }
