@@ -22,6 +22,14 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+evaluationDependsOn(":kraftadmin-ui")
+
+val generateIconsTask = project(":kraftadmin-ui").tasks.named("generateIcons")
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    dependsOn(generateIconsTask)
+}
+
 tasks.test {
     useJUnitPlatform()
 }

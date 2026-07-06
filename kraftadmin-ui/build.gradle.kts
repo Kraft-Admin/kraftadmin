@@ -41,6 +41,24 @@ tasks.register<Sync>("embedUi") {
     into(resourcesDir)
 }
 
+tasks.register<Exec>("generateIcons") {
+    group = "build"
+    dependsOn("npmInstall")
+    workingDir = uiDir
+
+    commandLine(if (org.apache.tools.ant.taskdefs.condition.Os.isFamily("windows"))
+        listOf("node", "scripts/generate-icons.js")
+    else listOf("node", "scripts/generate-icons.js"))
+
+    // Force the task to always run by disabling the up-to-date check
+    outputs.upToDateWhen { false }
+
+    // Keep inputs/outputs defined for dependency tracking,
+    // but the flag above ensures execution anyway.
+    inputs.file(uiDir.resolve("package.json"))
+    outputs.file(rootProject.projectDir.resolve("./kraftadmin-core/src/main/kotlin/com/kraftadmin/enums/KraftIcon.kt"))
+}
+
 // Ensure the UI is built before the resources are processed into the JAR
 tasks.named("processResources") {
     dependsOn("embedUi")
@@ -49,76 +67,3 @@ tasks.named("processResources") {
 kotlin {
     jvmToolchain(17)
 }
-
-//plugins {
-//    base
-//    kotlin("jvm")
-//}
-//
-//group = "com.kraftadmin"
-//version = "0.0.1"
-//
-//val uiDir = projectDir.resolve("kraftadmin-ui")
-//val uiDistDir = uiDir.resolve("dist")
-//val resourcesDir = projectDir.resolve("src/main/resources/META-INF/resources/admin")
-//
-///**
-// * Workaround: Helper function to find the absolute path of npm.
-// * This ensures that even if 'sh' can't find it, we provide the full path to Exec.
-// */
-//fun findNpmPath(): String {
-//    val isWindows = org.apache.tools.ant.taskdefs.condition.Os.isFamily("windows")
-//    val command = if (isWindows) listOf("where", "npm") else listOf("which", "npm")
-//
-//    return try {
-//        ProcessBuilder(command)
-//            .start()
-//            .inputStream
-//            .bufferedReader()
-//            .readLines()
-//            .firstOrNull()
-//            ?.trim() ?: (if (isWindows) "npm.cmd" else "npm")
-//    } catch (e: Exception) {
-//        if (isWindows) "npm.cmd" else "npm"
-//    }
-//}
-
-//tasks.register<Exec>("npmInstall") {
-//    group = "build"
-//    workingDir = uiDir
-//
-//    val npmPath = findNpmPath()
-//    executable = npmPath
-//    args("install")
-//
-//    inputs.file(uiDir.resolve("package.json"))
-//    outputs.dir(uiDir.resolve("node_modules"))
-//}
-//
-//tasks.register<Exec>("buildUi") {
-//    group = "build"
-//    dependsOn("npmInstall")
-//    workingDir = uiDir
-//
-//    val npmPath = findNpmPath()
-//    executable = npmPath
-//    args("run", "build")
-//
-//    inputs.dir(uiDir.resolve("src"))
-//    outputs.dir(uiDistDir)
-//}
-//
-//tasks.register<Sync>("embedUi") {
-//    group = "build"
-//    dependsOn("buildUi")
-//    from(uiDistDir)
-//    into(resourcesDir)
-//}
-//
-//tasks.named("processResources") {
-//    dependsOn("embedUi")
-//}
-
-//kotlin {
-//    jvmToolchain(17)
-//}
