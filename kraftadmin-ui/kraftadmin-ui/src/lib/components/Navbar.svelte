@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
   import { location, replace } from 'svelte-spa-router';
   import { isDark } from '../stores/theme';
   import { isAuthenticated, user, clearAuth } from '../stores/auth';
@@ -80,6 +80,109 @@ async function handleLogout() {
           Back to Website
         </a>
         <div title="Logged in via parent application" class="h-8 w-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+          {initials}
+        </div>
+      </div>
+    {/if}
+  </div>
+</header> -->
+
+<script lang="ts">
+  import { location, replace } from 'svelte-spa-router';
+  import { isDark } from '../stores/theme';
+  import { isAuthenticated, user, clearAuth } from '../stores/auth';
+  import { kraftFetch } from '../../api';
+  import { createEventDispatcher } from 'svelte';
+
+  import { 
+    Menu, 
+    Moon, 
+    Sun, 
+    LogOut, 
+    ArrowLeft, 
+    LayoutDashboard 
+  } from 'lucide-svelte';
+
+  export let environment: {
+    name: string;
+    authMode: string;
+    showLogout: boolean;
+    version: string;
+  } = {
+    name: 'Production',
+    authMode: 'bridge',
+    showLogout: false,
+    version: '1.0.0'
+  };
+
+  const dispatch = createEventDispatcher();
+
+  let loggingOut = false;
+
+  $: initials = $user?.username?.substring(0, 2).toUpperCase() || 'AD';
+  $: breadcrumb = $location.split('/').pop() || 'Dashboard';
+
+
+  // Navbar.svelte
+async function handleLogout() {
+    loggingOut = true;
+    try {
+        await kraftFetch('/admin/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+        console.error("Logout failed");
+    } finally {
+        // Force the browser to reset everything
+        replace("/auth/login");
+    }
+}
+</script>
+
+<header class="h-16 bg-bg-surface border-b border-border-subtle flex items-center justify-between px-4 md:px-8 z-10 transition-colors duration-200">
+  
+  <div class="flex items-center gap-3">
+    <button on:click={() => dispatch('toggle')} class="md:hidden p-2 text-zinc-500 hover:text-brand-primary">
+      <Menu class="w-5 h-5" />
+    </button>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-zinc-400 font-medium hidden md:block">Home</span>
+      <span class="text-zinc-300 hidden md:block">/</span>
+      <span class="font-bold text-text-main capitalize truncate max-w-[150px]">{breadcrumb}</span>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 md:gap-4">
+    <button
+      on:click={() => isDark.update(v => !v)}
+      class="p-2 rounded-lg bg-bg-main text-zinc-500 hover:text-brand-primary transition-colors"
+      aria-label="Toggle Theme"
+    >
+      {#if $isDark}
+        <Sun class="w-5 h-5" />
+      {:else}
+        <Moon class="w-5 h-5" />
+      {/if}
+    </button>
+
+    <div class="h-6 w-[1px] bg-border-subtle mx-1"></div>
+
+     {#if environment.showLogout}
+      <button 
+        on:click={handleLogout}
+        disabled={loggingOut}
+        class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-zinc-500 hover:text-red-500 hover:bg-red-500/5 transition-all group"
+      >
+        <div class="h-8 w-8 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-[10px] font-bold text-brand-primary group-hover:border-red-500/20 group-hover:bg-red-500/10 group-hover:text-red-500">
+          {initials}
+        </div>
+        <span class="text-xs font-semibold">{loggingOut ? 'Signing out...' : 'Sign Out'}</span>
+      </button>
+    {:else}
+      <div class="flex items-center gap-2 md:gap-4">
+        <a href="/" class="text-xs font-medium text-zinc-500 hover:text-brand-primary transition-colors flex items-center">
+          <ArrowLeft class="w-4 h-4 md:mr-1" />
+          <span class="hidden md:inline">Back</span>
+        </a>
+        <div class="h-8 w-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-400">
           {initials}
         </div>
       </div>

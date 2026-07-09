@@ -11,7 +11,14 @@
     import { kraftFetch } from "../../api";
     import { adminSettings } from "../stores/settings";
     import { isDark } from "../stores/theme";
+    import { updateResources } from "../stores/resources"; // Import the store helper
     import { replace } from "svelte-spa-router";
+
+    import { Menu, X } from "lucide-svelte";
+  import Snackbar from "./Snackbar.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
+    
+    let isMobileMenuOpen = false;
 
     let descriptor: any = null;
     let loading = true;
@@ -25,7 +32,6 @@
 
     async function bootstrap() {
         loading = true;
-
         try {
             const [descRes, settingsRes] = await Promise.all([
                 kraftFetch("/admin/api/resources/descriptors"),
@@ -37,7 +43,13 @@
                 return;
             }
 
-            descriptor = await descRes.json();
+            const data = await descRes.json();
+            descriptor = data;
+
+            // Populate the store so the Sidebar updates reactively
+            if (data.resources) {
+                updateResources(data.resources);
+            }
 
             if (settingsRes.ok) {
                 adminSettings.set(await settingsRes.json());
@@ -48,15 +60,23 @@
         }
     }
 
-    onMount(bootstrap);
+    // Optional: Add polling here to update resource counts automatically
+    onMount(() => {
+        bootstrap();
+        const interval = setInterval(async () => {
+            const res = await kraftFetch("/admin/api/resources/descriptors");
+            if (res.ok) {
+                const data = await res.json();
+                updateResources(data.resources || []);
+            }
+        }, 15000); // Poll every 15 seconds
+        
+        return () => clearInterval(interval);
+    });
 </script>
 
 <svelte:head>
-    <title>
-        {loading
-            ? "Loading KraftAdmin..."
-            : descriptor?.title || "KraftAdmin"}
-    </title>
+    <title>{loading ? "Loading KraftAdmin..." : descriptor?.title || "KraftAdmin"}</title>
 </svelte:head>
 
 {#if loading}
@@ -69,27 +89,32 @@
         </div>
     </div>
 {:else}
-<div class="flex h-screen bg-bg-main text-text-main font-sans overflow-hidden transition-colors duration-200 {$isDark ? 'dark' : ''}">
+<div class="flex h-screen bg-bg-main font-sans overflow-hidden">
+    {#if isMobileMenuOpen}
+        <button 
+            class="md:hidden fixed inset-0 bg-black/50 z-40" 
+            on:click={() => isMobileMenuOpen = false} 
+        />
+    {/if}
 
-    <Sidebar
-        resources={descriptor?.resources || []}
-        title={descriptor?.title}
-    />
+    <aside class="{isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 w-60 h-full transition-transform duration-300">
+        <Sidebar on:close={() => isMobileMenuOpen = false} />
+    </aside>
 
-    <div class="flex flex-1 flex-col min-w-0 relative">
-
-        <Navbar environment={descriptor?.environment} />
-
-        <main class="flex-1 overflow-y-auto p-8">
-            <div class="px-4">
-                <Router {routes}/>
-            </div>
+    <div class="flex-1 flex flex-col min-w-0">
+        <Navbar 
+            on:toggle={() => isMobileMenuOpen = !isMobileMenuOpen} 
+            environment={descriptor?.environment}
+        />
+        <main class="flex-1 overflow-y-auto p-4 md:p-8">
+            <Router {routes}/>
         </main>
-
-        <FeedbackWidget/>
+        <ConfirmDialog/>
+        <Snackbar />
+         <FeedbackWidget/>
         <Footer/>
-
     </div>
-
 </div>
+
 {/if}
