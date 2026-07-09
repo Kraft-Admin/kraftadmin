@@ -1,21 +1,97 @@
 package com.kraftadmin.annotations
 
-import com.kraftadmin.utils.custom_actions.DefaultKraftActionHandler
-import com.kraftadmin.utils.custom_actions.KraftActionHandler
+import com.kraftadmin.enums.ActionVariant
+import com.kraftadmin.enums.KraftIcon
+
+import com.kraftadmin.ui_descriptors.ActionTarget
+import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import kotlin.reflect.KClass
 
-
-@Target(AnnotationTarget.CLASS)
+/**
+ * Declares a custom action that can be rendered by KraftAdmin.
+ *
+ * May be placed on:
+ *  - an entity/resource class
+ *  - an action method
+ *
+ * The framework converts this annotation into a
+ * [KraftActionDescriptor] during startup.
+ */
+@Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class KraftAdminCustomAction(
+
+    /** The class of the entity this action applies to. */
+    val entityClass: KClass<*> = Nothing::class,
+
+    /** Unique action identifier (e.g. "approve-order"). */
     val name: String,
-    val label: String = "",
-    val icon: String = "play",
-    val variant: String = "default",
-    val handler: KClass<out KraftActionHandler<*>> = DefaultKraftActionHandler::class
+
+    /** Text displayed to the user. */
+    val label: String,
+
+    /** Optional icon. */
+    val icon: String = KraftIcon.ICON_PLAY,
+
+    /** primary | secondary | success | warning | danger */
+    val variant: ActionVariant = ActionVariant.PRIMARY,
+
+    /** Where the action should appear. */
+    val target: ActionTarget = ActionTarget.ROW,
+
+    /** Can operate on multiple selected rows. */
+    val bulk: Boolean = false,
+
+    /** Requires a selected entity. */
+    val requiresSelection: Boolean = true,
+
+    /** Optional confirmation dialog. */
+    val confirmMessage: String = "",
+
+    /** Opens an input dialog before execution. */
+    val requiresInput: Boolean = false,
+
+    /** Dialog title when requiresInput=true. */
+    val inputTitle: String = "",
+
+    /** Name of the form/schema used by the dialog. */
+    val inputSchema: String = "",
+
+    /** Hide the action after successful execution. */
+    val hideAfterExecution: Boolean = false,
+
+    /** Refresh the current page after execution. */
+    val refresh: Boolean = true,
+
+    /** Display order. Lower numbers appear first. */
+    val order: Int = 0,
+
+    /** Optional permission required to execute. */
+    val permission: String = "",
+
+    /** Optional grouping in the UI. */
+    val group: String = ""
 )
 
-enum class ActionVariant {
-    DEFAULT, PRIMARY, DANGER, SUCCESS, WARNING
+fun KraftAdminCustomAction.toDescriptor(): KraftActionDescriptor {
+    return KraftActionDescriptor(
+        entityClass = this.entityClass.takeIf { it != Nothing::class }?.simpleName,
+        name = this.name,
+        label = this.label,
+        icon = this.icon,
+        variant = this.variant,
+        target = this.target,
+        bulk = this.bulk,
+        requiresSelection = this.requiresSelection,
+        confirmMessage = this.confirmMessage.takeIf { it.isNotBlank() },
+        requiresInput = this.requiresInput,
+        inputTitle = this.inputTitle.takeIf { it.isNotBlank() },
+        inputSchema = this.inputSchema.takeIf { it.isNotBlank() },
+        hideAfterExecution = this.hideAfterExecution,
+        refresh = this.refresh,
+        order = this.order,
+        permission = this.permission.takeIf { it.isNotBlank() },
+        group = this.group.takeIf { it.isNotBlank() }
+    )
 }
