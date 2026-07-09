@@ -2,35 +2,38 @@ package com.kraftadmin.spi
 
 import api.responses.PagedResponse
 import api.utils.ResourceRow
-import com.kraftadmin.enums.FormInputType
-import com.kraftadmin.enums.FormInputType.*
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import com.kraftadmin.ui_descriptors.ResourceDescriptor
-import com.kraftadmin.utils.custom_actions.KraftActionResponse
-import config.KraftAdminPropertiesConfig
 import kotlin.reflect.KClass
 
 interface KraftAdminResource<T : Any> {
+
     val name: String
     val label: String
+
+    // Metadata properties from @KraftAdminResource
+    val group: String
+    val icon: String
+    val isHidden: Boolean
+    val isSearchable: Boolean
+    val defaultSort: String
+    val isReadOnly: Boolean
+    val pageSize: Int
+    val permissionScope: String
+    val searchableColumns: List<String>
+    val sortableColumns: List<String>
+    val isExportable: Boolean
     val customActions: List<KraftActionDescriptor>
     val entityClass: KClass<T>
     val columns: List<KraftAdminColumn>
-    /**
-     * Searchable columns are usually just strings or text-based fields.
-     */
-    val searchableColumns: List<String>
-        get() = columns.filter { col ->
-            col.searchable && listOf(TEXT, TEXTAREA, EMAIL, URL).contains(col.type)
-        }.map { it.name }
 
     /**
      * Sortable columns are restricted to comparable types: numbers, dates, and IDs.
      */
-    val sortableColumns: List<String>
-        get() = columns.filter { col ->
-            col.sortable && listOf(NUMBER, DATE, DATETIME, TIME, EMAIL, TEXT).contains(col.type)
-        }.map { it.name }
+//    val sortableColumns: List<String>
+//        get() = columns.filter { col ->
+//            col.sortable && listOf(NUMBER, DATE, DATETIME, TIME, EMAIL, TEXT).contains(col.type)
+//        }.map { it.name }
 
     fun getIdentifier(entity: T): Any
 
@@ -40,7 +43,15 @@ interface KraftAdminResource<T : Any> {
      * Fetch all rows for this resource
      * Returns a list of maps where key = column name, value = field value
      */
-    fun getAllRows(page:Int, size: Int, columns: List<KraftAdminColumn>): PagedResponse<ResourceRow> = dataProvider?.fetchAll(page, size, columns) ?: PagedResponse(emptyList(), 0, 0, 0, 0)
+    fun getAllRows(
+        page: Int,
+        size: Int,
+        query: String?,
+        columns: List<KraftAdminColumn>,
+        sortField: String?,
+        sortDirection: String?
+    ): PagedResponse<ResourceRow> =
+        dataProvider?.fetchAll(page, size, query, columns, sortField, sortDirection) ?: PagedResponse(emptyList(), 0, 0, 0, 0)
 
     fun getById(id: String) = dataProvider?.fetchById(id, columns)
 
@@ -57,6 +68,18 @@ interface KraftAdminResource<T : Any> {
             totalCount = countAll(name) ?: 0L,
             customActions = customActions.toList(),
             columns = columns.map { it.toDescriptor() },
-            data = PagedResponse(emptyList(), 0, 0, 20, 0)
+            data = PagedResponse(emptyList(), 0, 0, pageSize, 0),
+            group = group,
+            icon = icon,
+            hidden = isHidden,
+            searchable = isSearchable,
+            defaultSort = defaultSort,
+            readOnly = isReadOnly,
+            pageSize = pageSize,
+            permissionScope = permissionScope,
+            exportable = isExportable,
+            searchableFields = searchableColumns,
+            sortableFields = sortableColumns,
         )
+
 }

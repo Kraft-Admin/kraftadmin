@@ -2,12 +2,10 @@ package discovery
 
 import com.kraftadmin.annotations.FileConfig
 import com.kraftadmin.annotations.FileConfigDefaults
-import com.kraftadmin.annotations.KraftAdminCustomAction
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.annotations.KraftAdminLookup
 import com.kraftadmin.config.JpaDataProviderFactory
 import com.kraftadmin.enums.FormInputType
-import persistence.jpa.provider.JpaDataProvider
 import security.SecurityProviderChain
 import com.kraftadmin.spi.AbstractResource
 import com.kraftadmin.spi.KraftAdminResource
@@ -20,20 +18,22 @@ import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import util.JakartaValidationExtractor
 import com.kraftadmin.utils.files.AdminStorageProvider
 import config.KraftPulseSpringKraftAdminProperties
+import events.SpringActionRegistry
 import jakarta.persistence.*
-import logging.KraftAdminAuditor
-import telemetry.KraftTelemetryService
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.support.TransactionTemplate
+import persistence.jpa.provider.JpaDataProvider
+import persistence.jpa.metadata.EntityMetadata
+import events.SpringKraftLifecycleService
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.time.LocalDate
 import java.time.LocalDateTime
+import kotlin.collections.mapNotNull
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaField
@@ -87,21 +87,20 @@ object ResourceGenerator {
     fun <T : Any> generate(
         entityClass: Class<T>,
         context: ApplicationContext,
-        properties: KraftPulseSpringKraftAdminProperties
+        properties: KraftPulseSpringKraftAdminProperties,
     ): KraftAdminResource<T> {
         val kClass = entityClass.kotlin
+        val entityMetadata = EntityMetadata(kClass)
+        val actionRegistry: SpringActionRegistry = context.getBean(SpringActionRegistry::class.java)
+
+
         println("\n\n========== GENERATING RESOURCE FOR: ${kClass.simpleName} ==========")
 
         // Resolve the class-level annotation
         val adminRes = entityClass.getAnnotation(com.kraftadmin.annotations.KraftAdminResource::class.java)
 
-        // Fallback logic: Use annotation values if present, otherwise default to simpleName
-        val label = adminRes?.label?.ifBlank { kClass.simpleName ?: "Unknown" } ?: kClass.simpleName ?: "Unknown"
 
         val resource = object : AbstractResource<T>(
-//            name = kClass.simpleName ?: "Unknown",
-//            label = kClass.simpleName ?: "Unknown",
-//            entityClass = kClass
             name = kClass.simpleName ?: "Unknown",
             label = adminRes?.label?.ifBlank { kClass.simpleName ?: "Unknown" } ?: kClass.simpleName ?: "Unknown",
             entityClass = kClass,
@@ -113,11 +112,12 @@ object ResourceGenerator {
             isReadOnly = adminRes?.readOnly ?: false,
             pageSize = adminRes?.pageSize ?: 20,
             permissionScope = adminRes?.permissionScope ?: "ALL",
-            isExportable = adminRes?.exportable ?: true
+            isExportable = adminRes?.exportable ?: true,
         ) {
             val resource = adminRes
             init {
-                kClass.memberProperties.forEach { prop ->
+//                kClass.memberProperties.forEach { prop ->
+                    getAllProperties(kClass).forEach { prop ->
                     val javaField = prop.javaField ?: return@forEach
 
                     // === STEP 3: Skip transient/static ===
@@ -204,10 +204,14 @@ object ResourceGenerator {
                         val lookupKey = if (finalAnn != null && finalAnn.lookupKey.isNotBlank())
                             finalAnn.lookupKey else "id"
 
+                        val displayField = if(finalAnn != null && finalAnn.displayField.isNotBlank())
+                            finalAnn.displayField else ""
+
 //                        println("  FINAL LookupDescriptor(targetEntity=${tkc.simpleName}, searchField=$searchField, lookupKey=$lookupKey)")
                         LookupDescriptor(
                             targetEntity = tkc.simpleName ?: "Unknown",
                             searchField = searchField,
+                            displayField = displayField,
                             lookupKey = lookupKey
                         )
                     }
@@ -412,43 +416,81 @@ object ResourceGenerator {
                 return map
             }
 
+//            override val customActions: List<KraftActionDescriptor>
+//                get() {
+//                    return kClass.findAnnotations<KraftAdminCustomAction>().map { action ->
+//                        KraftActionDescriptor(
+//                            name = action.name,
+//                            label = action.label.ifEmpty { action.name.replace("-", " ").capitalize() },
+//                            icon = action.icon,
+//                            variant = action.variant
+//                        )
+//                    }
+//                }
+
+            // Inside generate(...) function
             override val customActions: List<KraftActionDescriptor>
                 get() {
-                    return kClass.findAnnotations<KraftAdminCustomAction>().map { action ->
-                        KraftActionDescriptor(
-                            name = action.name,
-                            label = action.label.ifEmpty { action.name.replace("-", " ").capitalize() },
-                            icon = action.icon,
-                            variant = action.variant
-                        )
-                    }
+                    // Query the registry for actions that match this resource's name
+                    // or just return all global actions if that's your design
+                    return actionRegistry.getResourceActions(kClass)
                 }
 
+            override val searchableColumns: List<String> by lazy {
+                entityMetadata.searchableFields
+            }
+
+            override val sortableColumns: List<String> by lazy {
+                entityMetadata.sortableFields
+            }
+
             override fun getIdentifier(entity: T): Any {
-                val idProp = kClass.memberProperties.find {
+                val idProp = getAllProperties(kClass).find {
                     it.name.equals("id", ignoreCase = true) ||
                             it.javaField?.isAnnotationPresent(Id::class.java) == true
                 } ?: throw IllegalStateException("No id property found for ${kClass.simpleName}")
-                return idProp.getter.call(entity)
-                    ?: throw IllegalStateException("Id is null")
+
+                return idProp.getter.call(entity) ?: throw IllegalStateException("Id is null")
             }
+
         }
 
         val factory = context.getBeanProvider(JpaDataProviderFactory::class.java).ifAvailable
         if (factory != null && entityClass.isAnnotationPresent(Entity::class.java)) {
             resource.dataProvider = JpaDataProvider(
-                factory.entityManager,
+//                factory.entityManager,
                 entityClass = kClass,
                 transactionTemplate = context.getBean(TransactionTemplate::class.java),
                 adminStorageProvider = context.getBean(AdminStorageProvider::class.java),
-                kraftAdminAuditor = context.getBean(KraftAdminAuditor::class.java),
+//                kraftAdminAuditor = context.getBean(KraftAdminAuditor::class.java),
                 securityChain = context.getBean(SecurityProviderChain::class.java),
                 properties = properties,
-                telemetryService = context.getBean(KraftTelemetryService::class.java)
+                entityManager = factory.entityManager,
+                applicationContext = context,
+                paginationProperties = properties.pagination,
+//                telemetryService = context.getBean(KraftTelemetryService::class.java)
+                lifecycleService = context.getBean(SpringKraftLifecycleService::class.java)
             )
         }
 
         return resource
+    }
+
+    private fun getAllProperties(kClass: KClass<*>): List<KProperty1<out Any, *>> {
+        val properties = mutableListOf<KProperty1<out Any, *>>()
+        var currentClass: KClass<*>? = kClass
+
+        while (currentClass != null && currentClass != Any::class) {
+            // Collect members, avoiding duplicates if overridden
+            currentClass.memberProperties.forEach { prop ->
+                if (properties.none { it.name == prop.name }) {
+                    properties.add(prop as KProperty1<out Any, *>)
+                }
+            }
+            // Move to superclass
+            currentClass = currentClass.supertypes.firstOrNull()?.classifier as? KClass<*>
+        }
+        return properties
     }
 
 
