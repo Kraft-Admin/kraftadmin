@@ -5,6 +5,8 @@ import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.ui_descriptors.FileConfigDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
+import spi.KraftAdminResource
+import spi.KraftDataProvider
 import kotlin.reflect.KClass
 
 /**
@@ -38,6 +40,7 @@ abstract class AbstractResource<T : Any>(
         searchable: Boolean = false,
         sortable: Boolean = false,
         visible: Boolean = true,
+        showInTable: Boolean = false,
         required: Boolean = false,
         defaultValue: Any? = null,
         selectOptions: List<SelectOption>? = null,
@@ -58,6 +61,7 @@ abstract class AbstractResource<T : Any>(
                 searchable = searchable,
                 sortable = sortable,
                 visible = visible,
+                showInTable = showInTable,
                 required = required,
                 defaultValue = defaultValue,
                 selectOptions = selectOptions,

@@ -1,7 +1,9 @@
-package com.kraftadmin.spi
+package spi
 
+import api.responses.KraftOperationResponse
 import api.responses.PagedResponse
 import api.utils.ResourceRow
+import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import com.kraftadmin.ui_descriptors.ResourceDescriptor
 import kotlin.reflect.KClass
@@ -26,15 +28,6 @@ interface KraftAdminResource<T : Any> {
     val customActions: List<KraftActionDescriptor>
     val entityClass: KClass<T>
     val columns: List<KraftAdminColumn>
-
-    /**
-     * Sortable columns are restricted to comparable types: numbers, dates, and IDs.
-     */
-//    val sortableColumns: List<String>
-//        get() = columns.filter { col ->
-//            col.sortable && listOf(NUMBER, DATE, DATETIME, TIME, EMAIL, TEXT).contains(col.type)
-//        }.map { it.name }
-
     fun getIdentifier(entity: T): Any
 
     var dataProvider: KraftDataProvider<T>?
@@ -57,7 +50,7 @@ interface KraftAdminResource<T : Any> {
 
     fun save(name: String, data: Map<String, Any?>) = dataProvider?.save(name = name, data = data)
 
-    fun delete(id: String) = dataProvider?.delete(id)
+    fun delete(id: String): KraftOperationResponse<Unit>? = dataProvider?.delete(id)
 
     fun countAll(name: String): Long? = dataProvider?.countAll(name)
 

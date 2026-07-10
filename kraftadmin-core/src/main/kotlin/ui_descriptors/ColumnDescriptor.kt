@@ -10,6 +10,7 @@ data class ColumnDescriptor(
     val searchable: Boolean,
     val sortable: Boolean,
     val visible: Boolean,
+    val showInTable: Boolean = false,
     val required: Boolean,
     val defaultValue: Any? = null,
     val subColumns: List<ColumnDescriptor>? = null,
@@ -27,11 +28,6 @@ data class ColumnDescriptor(
 /**
  * Clean POJO representation of the UI configuration parameters
  */
-//data class WYSIWYGOptions(
-//    val toolbar: String,
-//    val placeholder: String? = null,
-//    val options: List<List<Any>> = listOf(),
-//)
 class WYSIWYGOptions {
     var toolbar: String = "MINIMAL"
     var placeholder: String? = null
@@ -50,15 +46,6 @@ class WYSIWYGOptions {
 /**
  * File options UI descriptor with sensible default parameters
  */
-//data class FileConfigDescriptor(
-//    val multiple: Boolean = false,
-//    val maxFiles: Int = 1,
-//    val allowedExtensions: List<String> = emptyList(),
-//    val minSizeBytes: Long = 0L,
-//    val maxSizeBytes: Long = 10 * 1024 * 1024, // 10MB default
-//    val allowedMimeTypes: List<String> = emptyList()
-//)
-
 class FileConfigDescriptor {
     var multiple: Boolean = false
     var maxFiles: Int = 1
