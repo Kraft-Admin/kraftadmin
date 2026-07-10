@@ -49,14 +49,13 @@ annotation class KraftAdminCustomAction(
     /** Optional confirmation dialog. */
     val confirmMessage: String = "",
 
-    /** Opens an input dialog before execution. */
-    val requiresInput: Boolean = false,
-
-    /** Dialog title when requiresInput=true. */
-    val inputTitle: String = "",
-
     /** Name of the form/schema used by the dialog. */
-    val inputSchema: String = "",
+    val input: KClass<*> = Nothing::class,
+
+    val inputTitle: String = "",
+    val inputDescription: String = "",
+    val submitLabel: String = "Submit",
+    val cancelLabel: String = "Cancel",
 
     /** Hide the action after successful execution. */
     val hideAfterExecution: Boolean = false,
@@ -85,9 +84,6 @@ fun KraftAdminCustomAction.toDescriptor(): KraftActionDescriptor {
         bulk = this.bulk,
         requiresSelection = this.requiresSelection,
         confirmMessage = this.confirmMessage.takeIf { it.isNotBlank() },
-        requiresInput = this.requiresInput,
-        inputTitle = this.inputTitle.takeIf { it.isNotBlank() },
-        inputSchema = this.inputSchema.takeIf { it.isNotBlank() },
         hideAfterExecution = this.hideAfterExecution,
         refresh = this.refresh,
         order = this.order,

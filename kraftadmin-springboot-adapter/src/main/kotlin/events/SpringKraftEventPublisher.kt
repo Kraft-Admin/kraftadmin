@@ -1,19 +1,32 @@
 package events
 
+import com.kraftadmin.events.AsynchronousEvent
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.events.KraftEventPublisher
+import com.kraftadmin.events.SynchronousEvent
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 
 /**
  * Spring implementation of the Kraft event publisher.
  *
- * The publisher is responsible only for delivering events to registered
- * listeners. It does not decide which events should be synchronous or
- * asynchronous—that is defined by each listener.
+ * Event execution semantics are determined by the event type:
+ *
+ *  • SynchronousEvent
+ *      Executed immediately. Any exception propagates back to the caller
+ *      and may veto the current operation.
+ *
+ *  • AsynchronousEvent
+ *      Executed in the background. Exceptions are logged only.
  */
 @Component
+@ConditionalOnProperty(
+    prefix = "kraftpulse",
+    name = ["enabled"],
+    havingValue = "true"
+)
 open class SpringKraftEventPublisher(
     private val registry: SpringListenerRegistry
 ) : KraftEventPublisher {
@@ -21,15 +34,24 @@ open class SpringKraftEventPublisher(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     override fun publish(event: KraftAdminEvent) {
+
         logger.debug("Publishing {}", event::class.simpleName)
 
-        registry.getListeners(event::class.java)
+        registry
+            .getListeners(event::class.java)
             .filter { it.supports(event) }
             .forEach { listener ->
-                if (listener.async) {
-                    invokeAsync(listener, event)
-                } else {
-                    listener.execute(event)
+
+                when (event) {
+
+                    is SynchronousEvent ->
+                        listener.execute(event)
+
+                    is AsynchronousEvent ->
+                        invokeAsync(listener, event)
+
+                    else ->
+                        error("Unknown event type: ${event::class.qualifiedName}")
                 }
             }
     }
@@ -39,14 +61,17 @@ open class SpringKraftEventPublisher(
         listener: ListenerEntry,
         event: KraftAdminEvent
     ) {
+
         runCatching {
+
             listener.execute(event)
+
         }.onFailure { ex ->
+
             logger.error(
-                "Async listener {}.{}() failed: {}",
+                "Async listener {}.{}() failed",
                 listener.bean::class.simpleName,
                 listener.method.name,
-                ex.message,
                 ex
             )
         }

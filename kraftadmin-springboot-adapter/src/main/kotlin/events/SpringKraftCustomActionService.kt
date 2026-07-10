@@ -3,30 +3,36 @@ package events
 import actions.ActionHandlerEntry
 import com.kraftadmin.context.KraftActionContext
 import actions.KraftActionResponse
+import binder.JacksonInputBinder
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 
 @Service
+@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
 class SpringKraftCustomActionService(
     private val descriptorFactory: KraftAdminDescriptorFactory,
     private val actionRegistry: SpringActionRegistry,
-    private val publisher: SpringKraftEventPublisher
+    private val publisher: SpringKraftEventPublisher,
 ) {
 
     private val logger = LoggerFactory.getLogger(SpringKraftCustomActionService::class.java)
 
-    fun execute(resourceName: String, id: String, actionName: String, params: Map<String, Any?>): KraftActionResponse? {
+    fun execute(resourceName: String, id: String, actionName: String, input: Any?): KraftActionResponse? {
         val handler = actionRegistry.getAction(actionName)
             ?: throw IllegalArgumentException("Action '$actionName' not found.")
+
+        val convertedInput = handler.bindInput(input)
 
         // 1. Fetch the real Entity using the repository associated with this resource
         val dataProvider = descriptorFactory.getDataProviderForResource(resourceName)
             ?: throw IllegalArgumentException("No data provider for $resourceName")
 
-        val entity = dataProvider.findById(id) // This returns the actual Order entity
+        val entity = dataProvider.findById(id) // This returns the actual entity
             ?: throw IllegalArgumentException("Entity $id not found")
 
         logger.info("entity: $entity")
@@ -35,7 +41,7 @@ class SpringKraftCustomActionService(
             resourceName,
             entity,
             id,
-            params
+            convertedInput
         )
 
 
@@ -46,7 +52,7 @@ class SpringKraftCustomActionService(
                 resourceName = resourceName,
                 entity = entity,
                 actionName = actionName,
-                params = params,
+                input = input,
                 context = context.requestContext
             )
         )
@@ -58,7 +64,7 @@ class SpringKraftCustomActionService(
                 resourceName = resourceName,
                 entity = entity,
                 actionName = actionName,
-                params = params,
+                input = input,
                 context = context.requestContext
             )
         )
