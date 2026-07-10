@@ -65,12 +65,6 @@ annotation class KraftAdminOn(
     val entityClass: KClass<*> = Any::class,
 
     /**
-     * true = runs on kraftEventExecutor pool, errors never propagate.
-     * false = runs synchronously, exceptions propagate (use for BEFORE_ veto).
-     */
-    val async: Boolean = false,
-
-    /**
      * Lower order runs first within the same event type.
      */
     val order: Int = 0

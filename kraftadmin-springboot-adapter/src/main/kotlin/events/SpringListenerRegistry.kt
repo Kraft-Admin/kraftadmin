@@ -4,6 +4,7 @@ import annotations.KraftAdminOn
 import com.kraftadmin.events.KraftAdminEvent
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Results are cached in InMemoryListenerRegistry — zero reflection at dispatch time.
  */
 @Component
+@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
 class SpringListenerRegistry(
     private val applicationContext: ApplicationContext
 ) : KraftListenerRegistry {
@@ -71,32 +73,41 @@ class SpringListenerRegistry(
 
                 method.isAccessible = true
 
-                @Suppress("UNCHECKED_CAST")
                 val entry = ListenerEntry(
+
                     bean = bean,
+
                     method = method,
-                    entityClass = if (annotation.entityClass == Any::class) null
-                    else annotation.entityClass,
+
+                    entityClass =
+                        if (annotation.entityClass == Any::class)
+                            null
+                        else
+                            annotation.entityClass,
+
                     resource = annotation.resource,
+
                     eventTypes = annotation.events
                         .map { it.java as Class<out KraftAdminEvent> }
                         .toSet(),
-                    order = annotation.order,
-                    async = annotation.async
+
+                    order = annotation.order
                 )
 
                 register(entry)
                 discovered++
 
                 logger.info(
-                    "Registered {}.{}() → events={} resource='{}' entityClass={} async={} order={}",
-                    bean::class.simpleName, method.name,
+                    "Registered {}.{}() → events={} resource='{}' entityClass={} order={}",
+                    bean::class.simpleName,
+                    method.name,
                     entry.eventTypes.map { it.simpleName },
                     entry.resource.ifBlank { "*" },
                     entry.entityClass?.simpleName ?: "*",
-                    entry.async,
                     entry.order
                 )
+
+
             }
         }
 
