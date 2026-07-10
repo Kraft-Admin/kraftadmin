@@ -1,5 +1,6 @@
 package actions
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.kraftadmin.KraftAdmin.logger
 import com.kraftadmin.context.KraftActionContext
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
@@ -15,6 +16,19 @@ data class ActionHandlerEntry(
     val method: Method,
     val descriptor: KraftActionDescriptor
 ) {
+    private val mapper = ObjectMapper()
+
+    fun bindInput(rawInput: Any?): Any? {
+
+        val inputType = descriptor.input
+            ?: return null
+
+        return mapper.convertValue(
+            rawInput,
+            Class.forName(inputType.className)
+        )
+    }
+
     /**
      * Executes the action logic.
      * Uses reflection to invoke the method on the Spring bean.
@@ -55,9 +69,10 @@ data class ActionHandlerEntry(
             logger.error("Action failed", e)
 
             KraftActionResponse
-                .fail("Unexpected error.")
+                .fail("Unexpected error. ${e.message}")
                 .build()
         }
     }
+
 
 }
