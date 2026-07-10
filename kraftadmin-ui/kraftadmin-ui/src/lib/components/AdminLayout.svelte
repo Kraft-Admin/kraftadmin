@@ -17,6 +17,7 @@
     import { Menu, X } from "lucide-svelte";
   import Snackbar from "./Snackbar.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import ActionInputDialog from "./actions/ActionInputDialog.svelte";
     
     let isMobileMenuOpen = false;
 
@@ -111,6 +112,7 @@
             <Router {routes}/>
         </main>
         <ConfirmDialog/>
+        <ActionInputDialog />
         <Snackbar />
          <FeedbackWidget/>
         <Footer/>
