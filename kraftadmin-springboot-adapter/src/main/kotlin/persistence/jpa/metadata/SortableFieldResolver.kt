@@ -110,7 +110,7 @@ object SortableFieldResolver {
     }
 
     /**
-     * Returns true if this specific field name is sortable for the entity.
+     * Returns true if this specific field provider is sortable for the entity.
      * Used by FetchAll to validate incoming sort parameters.
      */
     fun isSortableField(entityClass: KClass<*>, fieldName: String): Boolean {

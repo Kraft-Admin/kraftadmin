@@ -22,7 +22,7 @@ class SpringActionRegistry(
 ) {
     private val logger = LoggerFactory.getLogger(SpringActionRegistry::class.java)
 
-    // This map stores the association between an action name and its executable method
+    // This map stores the association between an action provider and its executable method
     private val actionHandlers = mutableMapOf<String, ActionHandlerEntry>()
 
     private val actionsByName = mutableMapOf<String, ActionHandlerEntry>()

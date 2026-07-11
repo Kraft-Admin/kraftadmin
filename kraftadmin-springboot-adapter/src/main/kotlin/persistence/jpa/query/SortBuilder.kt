@@ -17,7 +17,7 @@ object SortBuilder {
 
     /**
      * Defines a sorting specification for a resource field.
-     * * @property field The name of the entity property to sort by.
+     * * @property field The provider of the entity property to sort by.
      * @property direction The sort order (ASC or DESC). Defaults to DESC.
      */
     data class SortSpec(
@@ -72,7 +72,7 @@ object SortBuilder {
 
     /**
      * Parses raw request parameters into a type-safe SortSpec.
-     * * @param field The field name provided by the API request.
+     * * @param field The field provider provided by the API request.
      * @param direction The direction string (e.g., "ASC", "DESC").
      * @return A valid SortSpec, or null if the field is empty.
      */

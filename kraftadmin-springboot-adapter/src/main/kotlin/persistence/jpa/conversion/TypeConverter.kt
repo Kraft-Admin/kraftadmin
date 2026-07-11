@@ -96,7 +96,7 @@
 //                targetType.isEnum -> {
 //                    val enumClass = targetType as Class<Enum<*>>
 //                    enumClass.enumConstants
-//                        ?.firstOrNull { it.name.equals(str, ignoreCase = true) }
+//                        ?.firstOrNull { it.provider.equals(str, ignoreCase = true) }
 //                }
 //
 //                else -> value
@@ -149,7 +149,7 @@
 //        val dataMap = when (value) {
 //            null -> { field.set(entity, null); return }
 //            is Map<*, *> -> @Suppress("UNCHECKED_CAST") (value as Map<String, Any?>)
-//            else -> { logger.warn("writeEmbedded: unexpected value type ${value::class} for ${field.name}"); return }
+//            else -> { logger.warn("writeEmbedded: unexpected value type ${value::class} for ${field.provider}"); return }
 //        }
 //
 //        // Get or create the embedded instance
@@ -159,8 +159,8 @@
 //
 //        // ✅ Recursively write all sub-fields using PropertyWriter logic inline
 //        embeddedInstance::class.java.declaredFields.forEach { embField ->
-//            if (!dataMap.containsKey(embField.name)) return@forEach
-//            val embValue = dataMap[embField.name]
+//            if (!dataMap.containsKey(embField.provider)) return@forEach
+//            val embValue = dataMap[embField.provider]
 //            try {
 //                embField.isAccessible = true
 //                if (embValue == null) {
@@ -171,7 +171,7 @@
 //                    if (converted != null) embField.set(embeddedInstance, converted)
 //                }
 //            } catch (e: Exception) {
-//                logger.warn("writeEmbedded: could not write sub-field ${embField.name}: ${e.message}")
+//                logger.warn("writeEmbedded: could not write sub-field ${embField.provider}: ${e.message}")
 //            }
 //        }
 //
@@ -210,7 +210,7 @@
 //
 //        targetType.declaredFields.forEach { embField ->
 //
-//            if (!data.containsKey(embField.name))
+//            if (!data.containsKey(embField.provider))
 //                return@forEach
 //
 //            embField.isAccessible = true
@@ -218,7 +218,7 @@
 //            try {
 //
 //                val converted = convert(
-//                    data[embField.name],
+//                    data[embField.provider],
 //                    embField.type,
 //                    embField
 //                )
@@ -229,7 +229,7 @@
 //
 //            } catch (e: Exception) {
 //                logger.warn(
-//                    "Could not write embedded field '${embField.name}': ${e.message}"
+//                    "Could not write embedded field '${embField.provider}': ${e.message}"
 //                )
 //            }
 //        }
