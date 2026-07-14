@@ -1,22 +1,9 @@
-//package com.kraftadmin.ui_descriptors
-//
-//import api.responses.PagedResponse
-//import api.utils.ResourceRow
-//
-//data class ResourceDescriptor(
-//    val name: String,
-//    val label: String,
-//    val totalCount: Long = 0,
-//    val customActions: List<KraftActionDescriptor> = emptyList(),
-//    val columns: List<ColumnDescriptor>,
-//    val data: PagedResponse<ResourceRow> = PagedResponse(emptyList(), 0, 0, 20, 0)
-//)
-
 package com.kraftadmin.ui_descriptors
 
 import com.kraftadmin.annotations.KraftAdminResource
 import api.responses.PagedResponse
 import api.utils.ResourceRow
+import com.kraftadmin.enums.ProviderType
 
 data class ResourceDescriptor(
     val name: String,
@@ -32,14 +19,24 @@ data class ResourceDescriptor(
     val exportable: Boolean,
     val totalCount: Long = 0,
     val customActions: List<KraftActionDescriptor> = emptyList(),
+    val searchableFields: List<String>,
+    val sortableFields: List<String>,
     val columns: List<ColumnDescriptor>,
-    val data: PagedResponse<ResourceRow>
+    val data: PagedResponse<ResourceRow>,
+    val provider: ProviderType
 ) {
     companion object {
         /**
          * Factory method to create a descriptor from an annotated class.
          */
-        fun from(clazz: Class<*>, annotation: KraftAdminResource, columns: List<ColumnDescriptor>): ResourceDescriptor {
+        fun from(
+            clazz: Class<*>,
+            annotation: KraftAdminResource,
+            columns: List<ColumnDescriptor>,
+            searchableFields: List<String>,
+            sortableFields: List<String>,
+            provider: ProviderType,
+        ): ResourceDescriptor {
             return ResourceDescriptor(
                 name = clazz.simpleName,
                 label = annotation.label.ifBlank { clazz.simpleName },
@@ -53,7 +50,10 @@ data class ResourceDescriptor(
                 permissionScope = annotation.permissionScope,
                 exportable = annotation.exportable,
                 columns = columns,
-                data = PagedResponse(emptyList(), 0, 0, annotation.pageSize, 0)
+                searchableFields = searchableFields,
+                sortableFields = sortableFields,
+                data = PagedResponse(emptyList(), 0, 0, annotation.pageSize, 0),
+                provider = provider
             )
         }
     }
