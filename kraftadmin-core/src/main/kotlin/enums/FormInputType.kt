@@ -73,6 +73,7 @@ enum class FormInputType {
     JSON,
     /** Rich text editor (WYSIWYG) for formatted HTML content. */
     WYSIWYG,
+    COLLECTION,
 
     //  Styling/Special
 

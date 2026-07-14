@@ -4,6 +4,10 @@ import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.spi.SelectOption
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
+import com.kraftadmin.ui_descriptors.ElementCollectionDescriptor
+import com.kraftadmin.ui_descriptors.ElementCollectionShape
+import com.kraftadmin.ui_descriptors.EmbeddableFieldDescriptor
+import com.kraftadmin.ui_descriptors.ValueType
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import jakarta.persistence.Transient
 import java.lang.reflect.Modifier
@@ -96,6 +100,15 @@ class JpaSubColumnBuilder(
                     null
                 }
 
+            val elementCollectionMeta = ElementCollectionResolver.resolve(javaField)
+
+            val resolvedType =
+                if (elementCollectionMeta != null) {
+                    FormInputType.COLLECTION
+                } else {
+                    type
+                }
+
             ColumnDescriptor(
 
                 name = prop.name,
@@ -107,7 +120,10 @@ class JpaSubColumnBuilder(
                     )
                     .replaceFirstChar { it.uppercase() },
 
-                type = type.name,
+//                type = type.name,
+
+                type = resolvedType.name,
+
 
                 defaultValue = defaultValue,
 
@@ -137,7 +153,8 @@ class JpaSubColumnBuilder(
 
                 wysiwygConfig = wysiwyg,
 
-                fileOptions = fileOptions
+                fileOptions = fileOptions,
+                elementCollection = elementCollectionMeta
             )
         }
     }

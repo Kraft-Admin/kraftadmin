@@ -4,14 +4,14 @@ import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.spi.SelectOption
-import com.kraftadmin.ui_descriptors.ColumnDescriptor
+import com.kraftadmin.ui_descriptors.ElementCollectionDescriptor
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import jakarta.persistence.*
 import org.slf4j.LoggerFactory
+import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.jvm.javaField
 
 class JpaColumnResolver(
@@ -21,7 +21,8 @@ class JpaColumnResolver(
     private val validationResolver: JpaValidationResolver,
     private val visibilityResolver: JpaVisibilityResolver,
     private val fileResolver: JpaFileResolver,
-    private val subColumnBuilder: JpaSubColumnBuilder
+    private val subColumnBuilder: JpaSubColumnBuilder,
+    private val elementCollectionResolver: ElementCollectionResolver
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -39,6 +40,8 @@ class JpaColumnResolver(
 
 
             val field = property.javaField ?: return null
+
+
 
             if (
                 field.isAnnotationPresent(Transient::class.java) ||
@@ -138,6 +141,15 @@ class JpaColumnResolver(
                     null
                 }
 
+            val elementCollection = ElementCollectionResolver.resolve(field)
+
+            val resolvedType =
+                if (elementCollection != null) {
+                    FormInputType.COLLECTION
+                } else {
+                    type
+                }
+
             return KraftAdminColumn(
                 name = property.name,
 
@@ -148,7 +160,9 @@ class JpaColumnResolver(
                     )
                     .replaceFirstChar { it.uppercase() },
 
-                type = FormInputType.valueOf(type.name),
+//                type = FormInputType.valueOf(type.name),
+
+                type = FormInputType.valueOf(resolvedType.name),
 
                 searchable = true,
 
@@ -187,7 +201,16 @@ class JpaColumnResolver(
                 lookup = lookup,
                 wysiwygConfigValue = wysiwyg,
 
-                fileOptions = fileOptions
+                fileOptions = fileOptions,
+                elementCollection = elementCollection?.let{
+                    ElementCollectionDescriptor(
+                        shape = it.shape,
+                        key = it.key,
+                        value = it.value,
+                        minItems = it.minItems,
+                        maxItems = it.maxItems
+                    )
+                }
             )
         } catch (e : Exception) {
             log.info("error resolving column for {} {} {}", property, entityClass, e.message)
@@ -196,7 +219,7 @@ class JpaColumnResolver(
     }
 
     private fun hasRelation(
-        field: java.lang.reflect.Field,
+        field: Field,
         property: KProperty1<out Any, *>,
         annotation: KClass<out Annotation>
     ): Boolean {

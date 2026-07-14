@@ -13,12 +13,13 @@
   let lastLoadedId: string | null = null;
   let fields: any[] = [];
   let lastColumnsJson = '';
+  
 
-  // ✅ Track which URLs were uploaded during THIS session
+  // Track which URLs were uploaded during THIS session
   // so cancel knows what to clean up
   let sessionUploadedUrls = new Set<string>();
 
-  // ✅ Track original file URLs from initialData so we never
+  // Track original file URLs from initialData so we never
   // delete files that existed before this edit session started
   let originalFileUrls = new Set<string>();
 
@@ -38,7 +39,7 @@
       formData = buildFormData(columns, initialData);
       lastLoadedId = currentId;
 
-      // ✅ Snapshot original file URLs so cancel doesn't delete pre-existing files
+      // Snapshot original file URLs so cancel doesn't delete pre-existing files
       originalFileUrls = new Set(collectFileUrls(formData));
       sessionUploadedUrls = new Set(); // reset on new record load
     }
@@ -53,6 +54,9 @@
     columns.forEach(col => {
       if (['IMAGE', 'VIDEO', 'FILE', 'AUDIO', 'DOCUMENT'].includes(col.type)) {
         const val = data[col.name];
+         console.log("FIELD", col.name);
+        console.log("VALUE", val);
+        console.log("MULTIPLE", col.fileOptions?.multiple);
         if (typeof val === 'string' && val) urls.push(val);
         if (Array.isArray(val)) val.filter(Boolean).forEach(v => urls.push(v));
       } else if (col.type === 'OBJECT' && col.subColumns) {
@@ -108,7 +112,25 @@
 
   function buildFormData(cols: any[], data: any): Record<string, any> {
     const values = data?.values || {};
-    const result: Record<string, any> = { id: data?.id ?? null };
+    // const result: Record<string, any> = { id: data?.id ?? null };
+
+    // const rawId = data?.id;
+    // const result: Record<string, any> = { 
+    //     id: (rawId !== undefined && rawId !== 0) ? rawId : null 
+    // };
+
+    const result: Record<string, any> = {};
+
+const rawId = data?.id;
+
+if (
+    rawId !== undefined &&
+    rawId !== null &&
+    rawId !== "" &&
+    rawId !== 0
+) {
+    result.id = rawId;
+}
 
     cols.forEach(col => {
       try {
@@ -156,7 +178,7 @@
             break;
           case 'CHECKBOX':
             result[col.name] = typeof raw === 'boolean' ? raw : false;
-            break;
+            break;              
           case 'ARRAY':
           case 'MULTI_SELECT':
             result[col.name] = Array.isArray(raw)
@@ -165,6 +187,22 @@
                   ? raw.split(',').map((s: string) => s.trim()).filter(Boolean)
                   : []);
             break;
+          case "COLLECTION": {
+    if (raw == null) {
+        result[col.name] = [];
+    } else if (Array.isArray(raw)) {
+        result[col.name] = raw;
+    } else if (typeof raw === "object") {
+        // Map
+        result[col.name] = Object.entries(raw).map(([key, value]) => ({
+            key,
+            value
+        }));
+    } else {
+        result[col.name] = [raw];
+    }
+    break;
+}  
           default:
             result[col.name] = raw !== null && typeof raw === 'object'
               ? (Array.isArray(raw) ? raw.join(', ') : (raw.displayField ?? raw.id ?? JSON.stringify(raw)))
@@ -187,7 +225,7 @@
 
   function handleFileClear(colName: string, index: number | null) {
     const current = formData[colName];
-    // ✅ When a file is removed from the form, also remove from session tracking
+    //  When a file is removed from the form, also remove from session tracking
     // so cancel doesn't try to delete something already gone
     if (typeof current === 'string') {
       sessionUploadedUrls.delete(current);
@@ -202,7 +240,7 @@
     }
   }
 
-  // ✅ Called by FieldRenderer when FileUploader completes an upload
+  //  Called by FieldRenderer when FileUploader completes an upload
   function handleFileUploaded(colName: string, url: string) {
     sessionUploadedUrls = new Set([...sessionUploadedUrls, url]);
   }
@@ -212,6 +250,12 @@
     sessionUploadedUrls = new Set();
     onSubmit(formData);
   }
+
+
+// Helper to find the lookup descriptor for a specific field
+  $: getLookup = (fieldName:any) => initialData?.relatedResources?.[fieldName]?.lookupDescriptor;
+
+
 </script>
 
 <div class="form-container !p-0">
@@ -237,6 +281,7 @@
           on:change={(e) => handleFieldChange(col.name, e.detail.value)}
           on:fileclear={(e) => handleFileClear(col.name, e.detail.index)}
           on:fileuploaded={(e) => handleFileUploaded(col.name, e.detail.url)}
+          lookup={getLookup(col.name)}
         />
 
         {#if colErrors?.length}

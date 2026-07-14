@@ -18,11 +18,11 @@ data class ColumnDescriptor(
     val placeholder: String? = null,
     val validationRules: String? = null,
     val validationMessages: Map<String, String>? = null,
-    // Server-side error message (e.g., "This email is already taken")
     val error: String? = null,
     val lookup: LookupDescriptor? = null,
     val wysiwygConfig: WYSIWYGOptions? = null,
-    val fileOptions: FileConfigDescriptor? = null
+    val fileOptions: FileConfigDescriptor? = null,
+    val elementCollection: ElementCollectionDescriptor? = null
 )
 
 /**

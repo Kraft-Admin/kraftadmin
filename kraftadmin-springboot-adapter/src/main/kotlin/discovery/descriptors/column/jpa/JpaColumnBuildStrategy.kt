@@ -62,7 +62,8 @@ class JpaColumnBuildStrategy : ColumnBuildStrategy {
             validationResolver = JpaValidationResolver(),
             fileResolver = JpaFileResolver(),
             visibilityResolver = JpaVisibilityResolver(),
-            subColumnBuilder = context.subColumnBuilder
+            subColumnBuilder = context.subColumnBuilder,
+            elementCollectionResolver = ElementCollectionResolver
         )
 
 //        logger.info("Building columns for {} {}", entityClass.simpleName, columnResolver.resolve(entityClass, properties[0]))

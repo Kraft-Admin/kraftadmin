@@ -13,8 +13,10 @@
   export let col: any;
   export let value: any;
   export let error: string[] | undefined = undefined;
+  export let lookup: any = undefined;
 
   import { createEventDispatcher } from 'svelte';
+  import CollectionInput from './CollectionInput.svelte';
   const dispatch = createEventDispatcher();
 
   function onChange(newVal: any) {
@@ -45,7 +47,7 @@
   <SelectInput {value} options={col.selectOptions} multiple on:change={(e) => onChange(e.detail)} />
 
 {:else if col.type === 'RELATION'}
-  <RelationInput {value} lookup={col.lookup} on:change={(e) => onChange(e.detail)} />
+  <RelationInput {value}   lookup={col.lookup} on:change={(e) => onChange(e.detail)} />
 
 {:else if col.type === 'MULTI_RELATION'}
   <MultiRelationInput {value} lookup={col.lookup} on:change={(e) => onChange(e.detail)} />
@@ -69,6 +71,15 @@
 
 {:else if col.type === 'WYSIWYG'}
   <WYSIWYG value={value} config={col.wysiwygConfig} onChange={(html) => onChange(html)} />
+
+
+  {:else if col.type === 'COLLECTION'}
+    <CollectionInput
+        descriptor={col.elementCollection}
+        value={value} 
+        on:change={(e) => onChange(e.detail)} 
+    />
+
 
 {:else if col.type === 'OBJECT'}
   <EmbeddedObjectInput
