@@ -1,6 +1,7 @@
 package com.kraftadmin.events
 
 import com.kraftadmin.context.KraftAdminEventContext
+import com.kraftadmin.query.KraftFilter
 import java.time.Instant
 
 /**
@@ -10,7 +11,7 @@ import java.time.Instant
  * or has already happened during a resource operation.
  *
  * Every event contains:
- * - the resource name
+ * - the resource provider
  * - the affected entity (when applicable)
  * - request/user context
  * - the timestamp when the event occurred
@@ -51,9 +52,7 @@ sealed class KraftAdminEvent {
      */
     abstract val occurredAt: Instant
 
-    // ---------------------------------------------------------------------
     // CREATE
-    // ---------------------------------------------------------------------
 
     /**
      * Fired before a new entity is created.
@@ -62,12 +61,11 @@ sealed class KraftAdminEvent {
      */
     data class BeforeCreate(
         override val resourceName: String,
+        override val entity: Any,
         val data: Map<String, Any?>,
         override val context: KraftAdminEventContext,
         override val occurredAt: Instant = Instant.now()
-    ) : KraftAdminEvent(), SynchronousEvent {
-        override val entity: Any? = null
-    }
+    ) : KraftAdminEvent(), SynchronousEvent
 
     /**
      * Fired after an entity has been successfully created.
@@ -80,10 +78,22 @@ sealed class KraftAdminEvent {
         override val occurredAt: Instant = Instant.now()
     ) : KraftAdminEvent(), AsynchronousEvent
 
-    // ---------------------------------------------------------------------
-    // UPDATE
-    // ---------------------------------------------------------------------
+    /**
+     * Fired whenever entity creation fails.
+     *
+     * This event is published after the transaction has been rolled back.
+     * Intended for audit logging, monitoring and notifications.
+     */
+    data class CreateFailed(
+        override val resourceName: String,
+        override val entity: Any?,
+        val data: Map<String, Any?>,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent
 
+    // UPDATE
     /**
      * Fired before an entity is updated.
      *
@@ -110,9 +120,109 @@ sealed class KraftAdminEvent {
         override val occurredAt: Instant = Instant.now()
     ) : KraftAdminEvent(), AsynchronousEvent
 
-    // ---------------------------------------------------------------------
+
+    /**
+     * Fired whenever an update operation fails.
+     */
+    data class UpdateFailed(
+        override val resourceName: String,
+        override val entity: Any?,
+        val id: String,
+        val data: Map<String, Any?>,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent
+
+//    FETCH
+    /**
+     * Fired before an entity is fetched by its identifier.
+     *
+     * Throwing an exception prevents the fetch.
+     */
+    data class BeforeFetchById(
+        override val resourceName: String,
+        val id: String,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), SynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired after an entity has been successfully fetched.
+     */
+    data class AfterFetchById(
+        override val resourceName: String,
+        override val entity: Any,
+        val id: String,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent
+
+    /**
+     * Fired whenever fetching an entity by id fails.
+     */
+    data class FetchByIdFailed(
+        override val resourceName: String,
+        val id: String,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired before a paginated fetch begins.
+     *
+     * Throwing an exception prevents the query.
+     */
+    data class BeforeFetchAll(
+        override val resourceName: String,
+        val page: Int,
+        val size: Int,
+        val searchQuery: String?,
+        val filters: List<KraftFilter>,
+        val sortField: String?,
+        val sortDirection: String?,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), SynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired after a successful paginated fetch.
+     */
+    data class AfterFetchAll(
+        override val resourceName: String,
+        val page: Int,
+        val size: Int,
+        val total: Long,
+        val returned: Int,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired whenever a paginated fetch fails.
+     */
+    data class FetchAllFailed(
+        override val resourceName: String,
+        val page: Int,
+        val size: Int,
+        val searchQuery: String?,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
+        override val entity: Any? = null
+    }
+
     // DELETE
-    // ---------------------------------------------------------------------
 
     /**
      * Fired before an entity is deleted.
@@ -138,9 +248,19 @@ sealed class KraftAdminEvent {
         override val occurredAt: Instant = Instant.now()
     ) : KraftAdminEvent(), AsynchronousEvent
 
-    // ---------------------------------------------------------------------
+    /**
+     * Fired whenever a delete operation fails.
+     */
+    data class DeleteFailed(
+        override val resourceName: String,
+        override val entity: Any?,
+        val id: String,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent
+
     // CUSTOM ACTIONS
-    // ---------------------------------------------------------------------
 
     /**
      * Fired before a custom action executes.
@@ -184,9 +304,7 @@ sealed class KraftAdminEvent {
         override val occurredAt: Instant = Instant.now()
     ) : KraftAdminEvent(), AsynchronousEvent
 
-    // ---------------------------------------------------------------------
     // BULK DELETE
-    // ---------------------------------------------------------------------
 
     /**
      * Fired before a bulk delete operation begins.
@@ -213,9 +331,20 @@ sealed class KraftAdminEvent {
         override val entity: Any? = null
     }
 
-    // ---------------------------------------------------------------------
+    /**
+     * Fired whenever a bulk delete operation fails.
+     */
+    data class BulkDeleteFailed(
+        override val resourceName: String,
+        val ids: List<String>,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
+        override val entity: Any? = null
+    }
+
     // BULK INSERT
-    // ---------------------------------------------------------------------
 
     /**
      * Fired before a bulk insert operation.
@@ -242,9 +371,20 @@ sealed class KraftAdminEvent {
         override val entity: Any? = null
     }
 
-    // ---------------------------------------------------------------------
+    /**
+     * Fired whenever a bulk insert operation fails.
+     */
+    data class BulkInsertFailed(
+        override val resourceName: String,
+        val dataList: List<Map<String, Any?>>,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
+        override val entity: Any? = null
+    }
+
     // EXPORT / PRINT
-    // ---------------------------------------------------------------------
 
     /**
      * Fired before data export begins.
@@ -258,6 +398,60 @@ sealed class KraftAdminEvent {
         override val context: KraftAdminEventContext,
         override val occurredAt: Instant = Instant.now()
     ) : KraftAdminEvent(), SynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired after data has been successfully exported.
+     */
+    data class AfterExport(
+        override val resourceName: String,
+        val format: String,
+        val exportedRows: Long,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired whenever an export operation fails.
+     */
+    data class ExportFailed(
+        override val resourceName: String,
+        val format: String,
+        val filterCriteria: Map<String, Any?>,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired before a print operation.
+     */
+    data class BeforePrint(
+        override val resourceName: String,
+        val entityId: String,
+        val templateName: String,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), SynchronousEvent {
+        override val entity: Any? = null
+    }
+
+    /**
+     * Fired whenever printing fails.
+     */
+    data class PrintFailed(
+        override val resourceName: String,
+        val entityId: String,
+        val templateName: String,
+        val exception: Throwable,
+        override val context: KraftAdminEventContext,
+        override val occurredAt: Instant = Instant.now()
+    ) : KraftAdminEvent(), AsynchronousEvent {
         override val entity: Any? = null
     }
 

@@ -16,7 +16,7 @@ package com.kraftadmin.annotations
  * val homeOfficeAllowance: Double = 0.0
  * ```
  *
- * @property field The name of the sibling property in this class to watch for changes.
+ * @property field The provider of the sibling property in this class to watch for changes.
  * @property value The string representation of the value required to trigger visibility.
  */
 @Target(AnnotationTarget.FIELD)

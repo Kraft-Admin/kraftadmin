@@ -2,6 +2,7 @@ package com.kraftadmin.spi
 
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
+import com.kraftadmin.ui_descriptors.ElementCollectionDescriptor
 import com.kraftadmin.ui_descriptors.FileConfigDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
@@ -25,13 +26,12 @@ data class KraftAdminColumn(
     // Map of Rule -> Custom Message
     // e.g., "required" -> "Please enter your email"
     val validationMessages: Map<String, String>? = null,
-
     // Temporary container for server-side validation results
     var currentError: String? = null,
-    // configuration for the lookup
     val lookup: LookupDescriptor? = null,
     val wysiwygConfigValue: WYSIWYGOptions? = null,
     val fileOptions: FileConfigDescriptor? = null,
+    val elementCollection: ElementCollectionDescriptor? = null
 ) {
     fun toDescriptor(): ColumnDescriptor =
         ColumnDescriptor(
@@ -52,7 +52,8 @@ data class KraftAdminColumn(
             error = currentError,
             lookup = lookup,
             wysiwygConfig = wysiwygConfigValue,
-            fileOptions = fileOptions
+            fileOptions = fileOptions,
+            elementCollection = elementCollection,
         )
 }
 
