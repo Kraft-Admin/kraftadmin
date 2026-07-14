@@ -3,6 +3,7 @@ package persistence.jpa.mapper
 import api.utils.ObjectResponse
 import api.utils.ResourceRow
 import com.kraftadmin.spi.KraftAdminColumn
+import com.kraftadmin.ui_descriptors.LookupDescriptor
 import events.SpringActionRegistry
 import jakarta.persistence.*
 import org.slf4j.LoggerFactory
@@ -12,7 +13,6 @@ import persistence.jpa.fetch.RelatedResourceFetcher
 import persistence.jpa.metadata.AssociationResolver
 import persistence.jpa.metadata.PropertyResolver
 import persistence.jpa.util.HibernateUtil
-import kotlin.collections.forEach
 import kotlin.reflect.KClass
 
 class ResourceRowMapper(
@@ -29,29 +29,37 @@ class ResourceRowMapper(
      * Relations → ObjectResponse. Collections → summarized list of ObjectResponse.
      * No related-resource expansion. Called for every row in FetchAll.
      */
-    fun mapToRow1(entity: Any, columns: List<KraftAdminColumn>): ResourceRow {
-        val real = HibernateUtil.unproxy(entity) ?: entity
-        val id = AssociationResolver.extractId(real)?.toString() ?: ""
-        val values = ValueConverter.mapEntityToValues(real)
-        return ResourceRow(
-            id = id,
-            values = values,
-            metadata = buildMetadata(real),
-            relatedResources = null,
-//            entityType = entityClass.java.simpleName,
-        )
-    }
-
     fun mapToRow(entity: Any, columns: List<KraftAdminColumn>): ResourceRow {
         val real = HibernateUtil.unproxy(entity) ?: entity
         val id = AssociationResolver.extractId(real)?.toString() ?: ""
-        val values = ValueConverter.mapEntityToValues(real)
+
+        val allValues = ValueConverter.mapEntityToValues(real)
+
+        val timestampFields = setOf(
+            "createdAt",
+            "updatedAt",
+//            "createdDate",
+//            "lastModifiedDate"
+        )
+
+        // First 8 inferred/display columns (excluding timestamps)
+        val selectedColumns = columns
+            .filter { it.name !in timestampFields }
+            .take(8)
+            .map { it.name }
+
+        // Then append timestamps if present
+        val allowed = (selectedColumns +
+                timestampFields.filter { allValues.containsKey(it) })
+            .toSet()
+
+        val values = allValues.filterKeys { it in allowed }
+
         return ResourceRow(
             id = id,
             values = values,
             metadata = buildMetadata(real),
-            relatedResources = null,
-//            entityType = entityClass.java.simpleName // Ensure this is present
+            relatedResources = null
         )
     }
 
@@ -71,6 +79,7 @@ class ResourceRowMapper(
         val related = try {
             relatedFetcher.fetch(real).mapValues { (_, collection) ->
                 ResourceRow.RelatedCollection(
+
                     fieldName = collection.fieldName,
                     entityType = collection.entityType,
                     items = collection.items.map { item ->
@@ -82,7 +91,13 @@ class ResourceRowMapper(
                         )
                     },
                     totalInMemory = collection.totalInMemory,
-                    limited = collection.limited
+                    limited = collection.limited,
+                    lookupDescriptor = LookupDescriptor(
+                        targetEntity = collection.entityType,
+                        lookupKey = collection.lookupKey,
+                        displayField = collection.displayField,
+                        searchableFields = collection.searchableFields
+                    )
                 )
             }
         } catch (e: Exception) {
@@ -134,7 +149,7 @@ class ResourceRowMapper(
                             val id = AssociationResolver.extractId(value)?.toString()
                                 ?: return@forEach
                             val label = AssociationResolver.resolveDisplayLabel(value) ?: id
-                            ObjectResponse(id = id, displayField = label)
+                            ObjectResponse(id = id, label= label)
                         }
                     }
 
@@ -150,7 +165,7 @@ class ResourceRowMapper(
                             val id = AssociationResolver.extractId(real)?.toString()
                                 ?: return@mapNotNull null
                             val label = AssociationResolver.resolveDisplayLabel(real) ?: id
-                            ObjectResponse(id = id, displayField = label)
+                            ObjectResponse(id = id, label = label)
                         }
 
                     value is Collection<*> ->
@@ -181,4 +196,5 @@ class ResourceRowMapper(
         "canDelete" to true,
         "cssClass" to null
     )
+
 }
