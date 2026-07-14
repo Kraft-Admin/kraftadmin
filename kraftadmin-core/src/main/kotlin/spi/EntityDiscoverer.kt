@@ -1,6 +1,8 @@
 package com.kraftadmin.spi
 
+import com.kraftadmin.enums.ProviderType
+
 interface EntityDiscoverer {
-    fun discover(): Set<Class<*>>
-    val name: String
+    fun discover(): Set<DiscoveredEntity<*>>
+    val provider: ProviderType
 }
