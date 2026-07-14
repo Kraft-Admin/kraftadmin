@@ -1,57 +1,13 @@
-//package persistence.jpa.lookup
-//
-//import api.utils.ObjectResponse
-//import jakarta.persistence.EntityManager
-//import org.slf4j.LoggerFactory
-//import persistence.jpa.metadata.AssociationResolver
-//import kotlin.reflect.KClass
-//
-//class LookupQuery(private val entityManager: EntityManager) {
-//
-//    private val logger = LoggerFactory.getLogger(LookupQuery::class.java)
-//
-//    fun <T : Any> execute(
-//        entityClass: KClass<T>,
-//        searchField: String,
-//        query: String,
-//        limit: Int = 20
-//    ): List<ObjectResponse> {
-//        return try {
-//            val cb = entityManager.criteriaBuilder
-//            val cq = cb.createQuery(entityClass.java)
-//            val root = cq.from(entityClass.java)
-//
-//            // Apply search filter if query is provided
-//            if (query.isNotBlank()) {
-//                cq.where(cb.like(cb.lower(root.get(searchField)), "%${query.lowercase()}%"))
-//            }
-//
-//            entityManager.createQuery(cq)
-//                .setMaxResults(limit)
-//                .resultList
-//                .mapNotNull { entity ->
-//                    // ✅ Apply the shared philosophy: Delegate extraction
-//                    val id = AssociationResolver.extractId(entity)?.toString() ?: return@mapNotNull null
-//
-//                    // You can keep resolveDisplayLabel here or move it to a LabelResolver utility
-//                    val label = AssociationResolver.resolveDisplayLabel(entity) ?: id
-//
-//                    ObjectResponse(id = id, displayField = label)
-//                }
-//        } catch (e: Exception) {
-//            logger.error("LookupQuery failed for ${entityClass.simpleName}: ${e.message}", e)
-//            emptyList()
-//        }
-//    }
-//}
-
 package persistence.jpa.lookup
 
 import api.utils.ObjectResponse
+import com.kraftadmin.annotations.KraftAdminField
 import jakarta.persistence.EntityManager
+import jakarta.persistence.Id
 import org.slf4j.LoggerFactory
 import persistence.jpa.metadata.AssociationResolver
-import persistence.jpa.metadata.PropertyResolver
+import persistence.jpa.metadata.EntityMetadata
+import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaField
@@ -69,82 +25,31 @@ class LookupQuery(private val entityManager: EntityManager) {
      */
     fun <T : Any> execute(
         entityClass: KClass<T>,
-        searchField: String,
-        displayField: String,
         query: String,
         limit: Int = 20
     ): List<ObjectResponse> {
+        val entityMetadata = EntityMetadata(entityClass)
+        val displayField = entityMetadata.displayField
+
         return try {
             val cb = entityManager.criteriaBuilder
             val cq = cb.createQuery(entityClass.java)
             val root = cq.from(entityClass.java)
 
             if (query.isNotBlank()) {
-                cq.where(
-                    cb.like(
-                        cb.lower(root.get(searchField)),
-                        "%${query.lowercase()}%"
-                    )
-                )
+                // ✅ Dynamically search across all searchable fields
+                val predicates = entityMetadata.searchableFields.map {
+                    cb.like(cb.lower(root.get(it)), "%${query.lowercase()}%")
+                }
+                cq.where(cb.or(*predicates.toTypedArray()))
             }
 
             entityManager.createQuery(cq)
                 .setMaxResults(limit)
                 .resultList
                 .mapNotNull { entity -> toObjectResponse(entity, displayField) }
-
         } catch (e: Exception) {
-            logger.error("LookupQuery.execute failed for ${entityClass.simpleName}: ${e.message}", e)
-            emptyList()
-        }
-    }
-
-    fun <T : Any> executeByIds1(
-        entityClass: KClass<T>,
-        displayField: String,
-        ids: List<String>
-    ): List<ObjectResponse> {
-        if (ids.isEmpty()) return emptyList()
-
-        return try {
-            val cb = entityManager.criteriaBuilder
-            val cq = cb.createQuery(entityClass.java)
-            val root = cq.from(entityClass.java)
-
-            // Resolve ID field name and type from @Id annotation
-            val idField = entityClass.java.declaredFields.firstOrNull {
-                it.isAnnotationPresent(jakarta.persistence.Id::class.java) ||
-                        it.isAnnotationPresent(org.springframework.data.annotation.Id::class.java)
-            }
-            val idFieldName = idField?.name ?: "id"
-
-            // Coerce string IDs to the correct JPA type
-            val coercedIds = ids.mapNotNull { id ->
-                try {
-                    when (idField?.type) {
-                        Long::class.java,
-                        java.lang.Long::class.java -> id.toLong()
-                        Int::class.java,
-                        java.lang.Integer::class.java -> id.toInt()
-                        java.util.UUID::class.java -> java.util.UUID.fromString(id)
-                        else -> id
-                    }
-                } catch (e: Exception) {
-                    logger.warn("executeByIds: could not coerce id '$id' for ${entityClass.simpleName}: ${e.message}")
-                    null
-                }
-            }
-
-            if (coercedIds.isEmpty()) return emptyList()
-
-            cq.where(root.get<Any>(idFieldName).`in`(coercedIds))
-
-            entityManager.createQuery(cq)
-                .resultList
-                .mapNotNull { entity -> toObjectResponse(entity, displayField) }
-
-        } catch (e: Exception) {
-            logger.error("executeByIds failed for ${entityClass.simpleName}: ${e.message}", e)
+            logger.error("Lookup failed: ${e.message}")
             emptyList()
         }
     }
@@ -155,44 +60,55 @@ class LookupQuery(private val entityManager: EntityManager) {
      */
     fun <T : Any> executeByIds(
         entityClass: KClass<T>,
-        displayField: String,
         ids: List<String>
     ): List<ObjectResponse> {
         if (ids.isEmpty()) return emptyList()
+
         return try {
             val cb = entityManager.criteriaBuilder
             val cq = cb.createQuery(entityClass.java)
             val root = cq.from(entityClass.java)
 
-            // Resolve the ID field name from @Id annotation
-            val idFieldName = entityClass.memberProperties
-                .firstOrNull { prop ->
-                    prop.javaField?.isAnnotationPresent(jakarta.persistence.Id::class.java) == true ||
-                            prop.javaField?.isAnnotationPresent(
-                                org.springframework.data.annotation.Id::class.java
-                            ) == true
-                }
-                ?.name ?: "id"
+            // Fix: Traverse hierarchy to find @Id, even if in BaseEntity
+            var currentClass: Class<*>? = entityClass.java
+            var idField: java.lang.reflect.Field? = null
 
-            // Coerce string IDs to the correct type
-            val idField = entityClass.java.declaredFields
-                .firstOrNull { it.isAnnotationPresent(jakarta.persistence.Id::class.java) }
+            while (currentClass != null && currentClass != Any::class.java) {
+                idField = currentClass.declaredFields.firstOrNull {
+                    it.isAnnotationPresent(Id::class.java) ||
+                            it.isAnnotationPresent(org.springframework.data.annotation.Id::class.java)
+                }
+                if (idField != null) break
+                currentClass = currentClass.superclass
+            }
+
+            // Fallback: If still null, try finding a field named "id"
+            if (idField == null) {
+                idField = entityClass.java.declaredFields.firstOrNull { it.name == "id" }
+            }
+
+            if (idField == null) throw IllegalArgumentException("No @Id field found on ${entityClass.simpleName} or its superclasses")
+
+            idField.isAccessible = true
+            val idFieldName = idField.name
+            val idType = idField.type
+
             val coercedIds = ids.mapNotNull { id ->
                 try {
-                    when (idField?.type) {
-                        Long::class.java, java.lang.Long::class.java -> id.toLong()
-                        Int::class.java, java.lang.Integer::class.java -> id.toInt()
-                        java.util.UUID::class.java -> java.util.UUID.fromString(id)
+                    when {
+                        Long::class.java.isAssignableFrom(idType) -> id.toLong()
+                        Int::class.java.isAssignableFrom(idType) -> id.toInt()
+                        UUID::class.java.isAssignableFrom(idType) -> UUID.fromString(id)
                         else -> id
                     }
                 } catch (e: Exception) { null }
             }
 
-            cq.where(root.get<Any>(idFieldName).`in`(coercedIds))
+            @Suppress("UNCHECKED_CAST")
+            val idPath = root.get<Any>(idFieldName).`as`(idType as Class<Any>)
+            cq.where(idPath.`in`(coercedIds))
 
-            entityManager.createQuery(cq)
-                .resultList
-                .mapNotNull { entity -> toObjectResponse(entity, displayField) }
+            entityManager.createQuery(cq).resultList.mapNotNull { toObjectResponse(it, "h1") }
 
         } catch (e: Exception) {
             logger.error("LookupQuery.executeByIds failed for ${entityClass.simpleName}: ${e.message}", e)
@@ -200,20 +116,45 @@ class LookupQuery(private val entityManager: EntityManager) {
         }
     }
 
-    private fun toObjectResponse(entity: Any, preferredDisplayField: String): ObjectResponse? {
-        val id = AssociationResolver.extractId(entity)?.toString() ?: return null
+
+    private fun toObjectResponse(
+        entity: Any,
+        preferredDisplayField: String?
+    ): ObjectResponse? {
+
+        val id = AssociationResolver.extractId(entity)?.toString()
+            ?: return null
 
         val props = entity::class.memberProperties.associateBy { it.name }
 
-        // ✅ Try preferred display field first, then candidates, then id
-        val label = props[preferredDisplayField]
-            ?.runCatching { getter.call(entity)?.toString() }
-            ?.getOrNull()
-            ?: LABEL_CANDIDATES
-                .firstOrNull { it in props }
-                ?.let { props[it]?.runCatching { getter.call(entity)?.toString() }?.getOrNull() }
-            ?: id
+        fun value(field: String?): String? {
+            if (field.isNullOrBlank()) return null
 
-        return ObjectResponse(id = id, displayField = label)
+            return props[field]
+                ?.getter
+                ?.call(entity)
+                ?.toString()
+                ?.takeIf(String::isNotBlank)
+        }
+
+        val annotatedField =
+            entity::class.memberProperties.firstOrNull {
+                it.javaField
+                    ?.getAnnotation(KraftAdminField::class.java)
+                    ?.displayField == true
+            }?.name
+
+        val label =
+            value(annotatedField)
+                ?: value(preferredDisplayField)
+                ?: LABEL_CANDIDATES.firstNotNullOfOrNull(::value)
+                ?: id
+
+        return ObjectResponse(
+            id = id,
+            label = label
+        )
     }
+
+
 }
