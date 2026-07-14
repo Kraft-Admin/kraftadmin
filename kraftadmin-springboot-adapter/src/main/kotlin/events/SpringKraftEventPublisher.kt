@@ -2,6 +2,7 @@ package events
 
 import com.kraftadmin.events.AsynchronousEvent
 import com.kraftadmin.events.KraftAdminEvent
+import com.kraftadmin.events.KraftEventConsumer
 import com.kraftadmin.events.KraftEventPublisher
 import com.kraftadmin.events.SynchronousEvent
 import org.slf4j.LoggerFactory
@@ -28,7 +29,8 @@ import org.springframework.stereotype.Component
     havingValue = "true"
 )
 open class SpringKraftEventPublisher(
-    private val registry: SpringListenerRegistry
+    private val registry: SpringListenerRegistry,
+    private val consumers: List<KraftEventConsumer> = emptyList()
 ) : KraftEventPublisher {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -54,6 +56,31 @@ open class SpringKraftEventPublisher(
                         error("Unknown event type: ${event::class.qualifiedName}")
                 }
             }
+
+        // Framework consumers
+        consumers.forEach { consumer ->
+
+            when (event) {
+                is SynchronousEvent ->
+                    consumer.consume(event)
+
+                is AsynchronousEvent ->
+                    invokeConsumerAsync(
+                        consumer,
+//                        event
+                    )
+
+                else -> {}
+            }
+        }
+
+
+    }
+
+    private fun invokeConsumerAsync(
+        consumer: KraftEventConsumer,
+//        event: AsynchronousEvent & KraftAdminEvent
+    ) {
     }
 
     @Async("kraftEventExecutor")

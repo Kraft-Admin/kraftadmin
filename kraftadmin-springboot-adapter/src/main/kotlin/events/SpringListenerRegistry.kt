@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Component
-import java.util.concurrent.ConcurrentHashMap
 
 
 /**
@@ -137,10 +136,6 @@ class SpringListenerRegistry(
             )
         }
     }
-//
-//    override fun getListeners(
-//        eventType: Class<out KraftAdminEvent>
-//    ): List<ListenerEntry> = listeners[eventType] ?: emptyList()
 
 
     override fun getListeners(

@@ -27,4 +27,34 @@ class SpringKraftLifecycleService(
     override fun onAfterBulkInsert(event: KraftAdminEvent.AfterBulkInsert) = dispatch(event)
     override fun onBeforeExport(event: KraftAdminEvent.BeforeExport) = dispatch(event)
     override fun onAfterPrint(event: KraftAdminEvent.AfterPrint) = dispatch(event)
+    override fun onCreateFailed(event: KraftAdminEvent.CreateFailed) = dispatch(event)
+    override fun onDeleteFailed(deleteFailed: KraftAdminEvent.DeleteFailed) {
+        dispatch(deleteFailed)
+    }
+
+    override fun onAfterFetchById(afterFetchById: KraftAdminEvent.AfterFetchById) {
+        dispatch(afterFetchById)
+    }
+
+    override fun onBeforeFetchById(beforeFetchById: KraftAdminEvent.BeforeFetchById) {
+        dispatch(beforeFetchById)
+    }
+
+    override fun onFetchByIdFailed(fetchByIdFailed: KraftAdminEvent.FetchByIdFailed) {
+        dispatch(fetchByIdFailed)
+    }
+
+    override fun onBeforeFetchAll(beforeFetchAll: KraftAdminEvent.BeforeFetchAll) {
+        dispatch(beforeFetchAll)
+    }
+
+    override fun onAfterFetchAll(afterFetchAll: KraftAdminEvent.AfterFetchAll) {
+        dispatch(afterFetchAll)
+    }
+
+    override fun onFetchAllFailed(fetchAllFailed: KraftAdminEvent.FetchAllFailed) {
+       dispatch(fetchAllFailed)
+    }
+
+
 }
