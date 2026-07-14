@@ -1,6 +1,7 @@
 package com.kraftadmin.spi
 
 import com.kraftadmin.enums.FormInputType
+import com.kraftadmin.enums.ProviderType
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.ui_descriptors.FileConfigDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
@@ -24,14 +25,14 @@ abstract class AbstractResource<T : Any>(
     override val isReadOnly: Boolean = false,
     override val pageSize: Int = 20,
     override val permissionScope: String = "ALL",
-    override val isExportable: Boolean = true
+    override val isExportable: Boolean = true,
+    override val provider: ProviderType
 ) : KraftAdminResource<T> {
     override var dataProvider: KraftDataProvider<T>? = null
 
     private val _columns = mutableListOf<KraftAdminColumn>()
 
-    override val columns: List<KraftAdminColumn>
-        get() = _columns.toList()
+    override var columns: List<KraftAdminColumn> = _columns.toList()
 
     protected fun column(
         name: String,
