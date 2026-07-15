@@ -12,7 +12,7 @@ interface AdminStorageProvider {
      * Uploads a raw binary asset payload to the storage engine and returns its fully qualified public URL.
      *
      * @param bytes The raw file content data stream.
-     * @param fileName The original file name including its filename extension (e.g., "avatar.png").
+     * @param fileName The original file provider including its filename extension (e.g., "avatar.png").
      * @param context A folder organizational namespace hint (e.g., "users", "products", "blog-posts").
      * @return The absolute public HTTP(S) URL or root-relative path pointing to the created asset.
      * @throws RuntimeException If any network transport, authorization, or disk I/O faults occur.
@@ -25,7 +25,7 @@ interface AdminStorageProvider {
      *
      * @param oldFileUrl The fully qualified public URL of the asset currently stored and slated for replacement.
      * @param bytes The raw file content data stream for the new replacement file.
-     * @param fileName The original name of the replacement file.
+     * @param fileName The original provider of the replacement file.
      * @param context A folder organizational namespace hint matching the target context.
      * @return The absolute public URL of the newly created replacement asset.
      */

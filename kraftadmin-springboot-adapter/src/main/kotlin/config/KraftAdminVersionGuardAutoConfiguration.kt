@@ -9,9 +9,9 @@ import org.springframework.core.Ordered
 
 @AutoConfiguration
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
-class KraftPulseVersionGuardAutoConfiguration {
+class KraftAdminVersionGuardAutoConfiguration {
 
-    private val logger = LoggerFactory.getLogger(KraftPulseVersionGuardAutoConfiguration::class.java)
+    private val logger = LoggerFactory.getLogger(KraftAdminVersionGuardAutoConfiguration::class.java)
 
     @PostConstruct
     fun checkSupportedVersion() {

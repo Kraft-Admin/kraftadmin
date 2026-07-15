@@ -4,6 +4,7 @@ import jakarta.persistence.*
 import org.slf4j.LoggerFactory
 import persistence.jpa.util.HibernateUtil
 import persistence.jpa.util.HibernateUtil.unproxy
+import java.lang.reflect.Field
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
@@ -17,12 +18,12 @@ object AssociationResolver {
 
     private val logger = LoggerFactory.getLogger(AssociationResolver::class.java)
 
-    fun extractId(entity: Any): Any? {
+    fun extractId1(entity: Any): Any? {
         val clean = unproxy(entity) ?: return null
         var currentClass: Class<*>? = clean.javaClass
 
         while (currentClass != null && currentClass != Any::class.java) {
-            // Find by annotation or name
+            // Find by annotation or provider
             val idField = currentClass.declaredFields.find {
                 it.isAnnotationPresent(Id::class.java) || it.name == "id"
             }
@@ -40,6 +41,16 @@ object AssociationResolver {
         }
 
         return null
+    }
+
+    fun extractId(entity: Any): Any? {
+        val real = unproxy(entity) ?: return null
+
+        val field = findIdField(real.javaClass) ?: return null
+
+        field.isAccessible = true
+
+        return field.get(real)
     }
 
     fun resolveDisplayLabel(entity: Any): String? {
@@ -72,5 +83,39 @@ object AssociationResolver {
             null
         }
     }
+
+    //     extracts the name of @Id annoted fields
+    fun getIdPropertyName1(type: KClass<*>): String {
+        return type.memberProperties
+            .firstOrNull {
+                it.javaField?.isAnnotationPresent(jakarta.persistence.Id::class.java) == true ||
+                        it.javaField?.isAnnotationPresent(org.springframework.data.annotation.Id::class.java) == true
+            }
+            ?.name
+            ?: "id"
+    }
+
+    fun getIdPropertyName(type: KClass<*>): String {
+        return findIdField(type.java)?.name
+            ?: throw IllegalStateException(
+                "No @Id field found for ${type.simpleName}"
+            )
+    }
+
+    private fun findIdField(type: Class<*>): Field? {
+        var current: Class<*>? = type
+
+        while (current != null && current != Any::class.java) {
+            current.declaredFields.firstOrNull {
+                it.isAnnotationPresent(Id::class.java) ||
+                        it.isAnnotationPresent(org.springframework.data.annotation.Id::class.java)
+            }?.let { return it }
+
+            current = current.superclass
+        }
+
+        return null
+    }
+
 
 }

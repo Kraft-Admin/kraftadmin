@@ -16,7 +16,7 @@ import kotlin.collections.forEach
 import kotlin.reflect.KClass
 
 @Component
-@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class SpringActionRegistry(
     private val applicationContext: ApplicationContext
 ) {

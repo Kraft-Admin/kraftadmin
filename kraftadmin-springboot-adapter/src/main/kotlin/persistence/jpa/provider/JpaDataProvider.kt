@@ -14,7 +14,7 @@
 //import com.kraftadmin.spi.KraftDataProvider
 //import com.kraftadmin.ui_descriptors.LookupDescriptor
 //import com.kraftadmin.utils.files.AdminStorageProvider
-//import config.KraftPulseSpringKraftAdminProperties
+//import config.KraftAdminProperties
 //import jakarta.persistence.ElementCollection
 //import jakarta.persistence.Embedded
 //import jakarta.persistence.EntityManager
@@ -60,7 +60,7 @@
 //    private val adminStorageProvider: AdminStorageProvider? = null,
 //    private val kraftAdminAuditor: KraftAdminAuditor,
 //    private val securityChain: SecurityProviderChain,
-//    private val properties: KraftPulseSpringKraftAdminProperties,
+//    private val properties: KraftAdminProperties,
 //    private val telemetryService: KraftTelemetryService
 //) : KraftDataProvider<T> {
 //
@@ -96,7 +96,7 @@
 //                    // triggers the OID streaming while the transaction is open.
 //                    value?.toString()
 //                } catch (e: Exception) {
-//                    logger.warn("Could not pre-initialize LOB field: ${field.name}")
+//                    logger.warn("Could not pre-initialize LOB field: ${field.provider}")
 //                }
 //            }
 //        }
@@ -163,7 +163,7 @@
 //    }
 //
 //    /**
-//     * Finds the field name annotated with common creation timestamp annotations.
+//     * Finds the field provider annotated with common creation timestamp annotations.
 //     */
 //    private val cachedSortField: String? by lazy {
 //        findFieldInHierarchy(entityClass.java)
@@ -175,9 +175,9 @@
 //        val fieldName = clazz.declaredFields.find { field ->
 //            field.isAnnotationPresent(CreationTimestamp::class.java) ||
 //                    field.isAnnotationPresent(CreatedDate::class.java) ||
-//                    field.name == "createdAt" ||
-//                    field.name == "createdDate"
-//        }?.name
+//                    field.provider == "createdAt" ||
+//                    field.provider == "createdDate"
+//        }?.provider
 //
 //        if (fieldName != null) return fieldName
 //
@@ -279,7 +279,7 @@
 //* Save item to db
 //*
 // */
-//    override fun save(name: String, data: Map<String, Any?>): Map<String, Any?> {
+//    override fun save(provider: String, data: Map<String, Any?>): Map<String, Any?> {
 //        return transactionTemplate.execute<Map<String, Any?>> { status ->
 //            val data = (data["data"] as? Map<String, Any?>) ?: data
 //            val rawId = data["id"] ?: data["ID"]
@@ -364,7 +364,7 @@
 //        data.forEach { (key, value) ->
 //            if (key == "id" || value == null) return@forEach
 //
-//            val prop = targetClass.memberProperties.find { it.name == key }
+//            val prop = targetClass.memberProperties.find { it.provider == key }
 //            if (prop is KMutableProperty<*>) {
 //                prop.isAccessible = true
 //                val field = prop.javaField ?: return@forEach
@@ -410,7 +410,7 @@
 ////                                    }
 //                                    // NEW: Enums inside a collection
 //                                    genericType != null && genericType.isSubclassOf(Enum::class) -> {
-//                                        genericType.java.enumConstants.filterIsInstance<Enum<*>>().find { it.name.equals(item.toString(), true) }
+//                                        genericType.java.enumConstants.filterIsInstance<Enum<*>>().find { it.provider.equals(item.toString(), true) }
 //                                    }
 //                                    // Simple Types
 //                                    else -> coerceValue(item, genericType)
@@ -469,7 +469,7 @@
 //                                }
 //                                // Enums
 //                                classifier != null && classifier.isSubclassOf(Enum::class) -> {
-//                                    classifier.java.enumConstants.filterIsInstance<Enum<*>>().find { it.name.equals(value.toString(), true) }
+//                                    classifier.java.enumConstants.filterIsInstance<Enum<*>>().find { it.provider.equals(value.toString(), true) }
 //                                }
 //                                // UUID
 //                                classifier == UUID::class && value is String -> UUID.fromString(value)
@@ -564,7 +564,7 @@
 //            }
 //    }
 //
-//    override fun countAll(name: String): Long? {
+//    override fun countAll(provider: String): Long? {
 //            return transactionTemplate.execute {
 //                val cb = entityManager.criteriaBuilder
 //                val query = cb.createQuery(Long::class.java)
@@ -583,7 +583,7 @@
 //
 //            //  Also check @Transient on the getter method (covers @Transient on methods like getAuthor())
 //            val getterMethod = try {
-//                entity::class.java.getMethod("get${prop.name.replaceFirstChar { it.uppercase() }}")
+//                entity::class.java.getMethod("get${prop.provider.replaceFirstChar { it.uppercase() }}")
 //            } catch (e: NoSuchMethodException) { null }
 //
 //            val isTransientField = field.isAnnotationPresent(Transient::class.java) || field.isAnnotationPresent(jakarta.persistence.Transient::class.java)
@@ -613,7 +613,7 @@
 //                field.isAccessible = true
 //                field.get(entity)
 //            } catch (e: Exception) {
-//                logger.warn("Could not read field ${field.name}: ${e.message}")
+//                logger.warn("Could not read field ${field.provider}: ${e.message}")
 //                null
 //            }
 //
@@ -624,7 +624,7 @@
 //                // 2. Handle Embedded (Value Objects)
 //                field.isAnnotationPresent(Embedded::class.java) -> {
 //                    if (value == null) {
-//                        result[prop.name] = null
+//                        result[prop.provider] = null
 //                    } else {
 //                        val fullMap = mapEntityToData(value)
 //                        val summary = fullMap.values
@@ -633,7 +633,7 @@
 //                            .take(2)
 //                            .joinToString(", ")
 //
-//                        result[prop.name] = EmbeddedResponse(summary, fullMap)
+//                        result[prop.provider] = EmbeddedResponse(summary, fullMap)
 //                    }
 //                }
 //
@@ -642,12 +642,12 @@
 //                field.isAnnotationPresent(ManyToOne::class.java) ||
 //                        field.isAnnotationPresent(OneToOne::class.java) -> {
 //                    if (value == null) {
-//                        result[prop.name] = null
+//                        result[prop.provider] = null
 //                    } else {
 //                        val id = try { extractId(value).toString() } catch (e: Exception) { null }
 //
 //                        if (id == null) {
-//                            result[prop.name] = null
+//                            result[prop.provider] = null
 //                        } else {
 //                            val label = try {
 //                                value::class.memberProperties
@@ -658,8 +658,8 @@
 //                                            javaField.isAnnotationPresent(jakarta.persistence.Transient::class.java) ||
 //                                            Modifier.isStatic(javaField.modifiers)) return@filter false
 //
-//                                        val name = p.name.lowercase()
-//                                        if (name == "id" || name.endsWith("id") || name.contains("password")) return@filter false
+//                                        val provider = p.provider.lowercase()
+//                                        if (provider == "id" || provider.endsWith("id") || provider.contains("password")) return@filter false
 //
 //                                        // ✅ Safe classifier check — skip if not a plain KClass
 //                                        val classifier = p.returnType.classifier
@@ -668,7 +668,7 @@
 //                                        isSimpleType(classifier)
 //                                    }
 //                                    .let { candidates ->
-//                                        candidates.find { it.name == "name" || it.name == "title" || it.name == "label" }
+//                                        candidates.find { it.provider == "provider" || it.provider == "title" || it.provider == "label" }
 //                                            ?: candidates.firstOrNull()
 //                                    }
 //                                    ?.let { best ->
@@ -676,18 +676,18 @@
 //                                        best.getter.call(value)?.toString()
 //                                    }
 //                            } catch (e: Exception) {
-//                                logger.warn("Could not resolve label for ${value::class.simpleName}.${prop.name}: ${e.message}")
+//                                logger.warn("Could not resolve label for ${value::class.simpleName}.${prop.provider}: ${e.message}")
 //                                null
 //                            } ?: id
 //
-//                            result[prop.name] = ObjectResponse(id, label)
+//                            result[prop.provider] = ObjectResponse(id, label)
 //                        }
 //                    }
 //                }
 //
 //                // 4. Handle Collections
 //                value is Collection<*> -> {
-//                    result[prop.name] = value.map { item ->
+//                    result[prop.provider] = value.map { item ->
 //                        val realItem = unproxy(item) // ✅ Unproxy each collection element
 //                        if (realItem == null) null
 //                        else if (isSimpleType(realItem::class)) realItem
@@ -696,7 +696,7 @@
 //                }
 //
 //                // 5. Simple Types
-//                else -> result[prop.name] = value
+//                else -> result[prop.provider] = value
 //            }
 //        }
 //        return result
@@ -715,9 +715,9 @@
 //    }
 //
 //    private fun isSimpleType1(kClass: KClass<*>): Boolean {
-//        val typeName = kClass.java.name
+//        val typeName = kClass.java.provider
 //
-//        // If the class name contains ByteBuddy or Hibernate, it is NOT simple.
+//        // If the class provider contains ByteBuddy or Hibernate, it is NOT simple.
 //        if (typeName.contains("Hibernate") ||
 //            typeName.contains("ByteBuddy") ||
 //            typeName.contains("_$$")) return false
@@ -735,9 +735,9 @@
 //        var currentClass: Class<*>? = clean.javaClass
 //
 //        while (currentClass != null && currentClass != Any::class.java) {
-//            // Find by annotation or name
+//            // Find by annotation or provider
 //            val idField = currentClass.declaredFields.find {
-//                it.isAnnotationPresent(Id::class.java) || it.name == "id"
+//                it.isAnnotationPresent(Id::class.java) || it.provider == "id"
 //            }
 //
 //            if (idField != null) {
@@ -836,7 +836,7 @@
 //                // 2. Handle Embedded (Value Objects)
 //                field.isAnnotationPresent(Embedded::class.java) -> {
 //                    if (value == null) {
-//                        result[prop.name] = null
+//                        result[prop.provider] = null
 //                    } else {
 //                        val fullMap = mapEntityToValues(value) // Recursive call
 //                        val summary = fullMap.values
@@ -845,7 +845,7 @@
 //                            .take(2)
 //                            .joinToString(", ")
 //
-//                        result[prop.name] = EmbeddedResponse(summary, fullMap)
+//                        result[prop.provider] = EmbeddedResponse(summary, fullMap)
 //                    }
 //                }
 //
@@ -853,17 +853,17 @@
 //                // 3. Handle Single Relationships
 //                field.isAnnotationPresent(ManyToOne::class.java) || field.isAnnotationPresent(OneToOne::class.java) -> {
 //                    if (value == null) {
-//                        result[prop.name] = null
+//                        result[prop.provider] = null
 //                    } else {
 //                        val id = extractId(value).toString()
 //                        val label = resolveDisplayLabel(value) ?: id
-//                        result[prop.name] = ObjectResponse(id, label)
+//                        result[prop.provider] = ObjectResponse(id, label)
 //                    }
 //                }
 //
 //                // 4. NEW: Handle Element Collections (Tags, Highlights, etc.)
 //                field.isAnnotationPresent(ElementCollection::class.java) -> {
-//                    result[prop.name] = if (value is Collection<*>) {
+//                    result[prop.provider] = if (value is Collection<*>) {
 //                        value.map { it?.toString() } // Return raw strings
 //                    } else {
 //                        emptyList<String>()
@@ -872,7 +872,7 @@
 //
 //                // 5. Handle Collection Relationships (ManyToMany / OneToMany)
 //                field.isAnnotationPresent(ManyToMany::class.java) || field.isAnnotationPresent(OneToMany::class.java) -> {
-//                    result[prop.name] = if (value is Collection<*>) {
+//                    result[prop.provider] = if (value is Collection<*>) {
 //                        value.map { item ->
 //                            if (item == null) null
 //                            else {
@@ -885,7 +885,7 @@
 //                }
 //
 //                // 6. Primitive / Simple types
-//                else -> result[prop.name] = value
+//                else -> result[prop.provider] = value
 //            }
 //        }
 //        return result
@@ -912,10 +912,10 @@
 //            field?.isAnnotationPresent(KraftAdminField::class.java) == true &&
 //                    field.getAnnotation(KraftAdminField::class.java).displayField
 //        } ?: props.find {
-//            it.name.lowercase() in listOf("name", "title", "label", "username", "displayname")
+//            it.provider.lowercase() in listOf("provider", "title", "label", "username", "displayname")
 //        } ?: props.filter { prop ->
 //            val classifier = prop.returnType.classifier as? KClass<*>
-//            classifier != null && isSimpleType(classifier) && prop.name.lowercase() != "id"
+//            classifier != null && isSimpleType(classifier) && prop.provider.lowercase() != "id"
 //        }.getOrNull(0)
 //
 //        return try {
@@ -1013,14 +1013,15 @@
 
 package persistence.jpa.provider
 
+import api.responses.KraftOperationResponse
 import api.responses.PagedResponse
 import api.utils.ObjectResponse
 import api.utils.ResourceRow
 import com.kraftadmin.spi.KraftAdminColumn
-import com.kraftadmin.spi.KraftDataProvider
+import spi.KraftDataProvider
 import com.kraftadmin.ui_descriptors.LookupDescriptor
 import com.kraftadmin.utils.files.AdminStorageProvider
-import config.KraftPulseSpringKraftAdminProperties
+import config.KraftAdminProperties
 import config.PaginationConfig
 import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory
@@ -1038,6 +1039,8 @@ import persistence.jpa.save.EntitySaver
 import persistence.jpa.save.PropertyWriter
 import persistence.jpa.save.RelationshipWriter
 import events.SpringKraftLifecycleService
+import persistence.error.DefaultPersistenceErrorResolver
+import persistence.jpa.validation.PersistenceValidationService
 import security.SecurityProviderChain
 import kotlin.reflect.KClass
 
@@ -1054,10 +1057,11 @@ class JpaDataProvider<T : Any>(
     private val adminStorageProvider: AdminStorageProvider,
 //    private val kraftAdminAuditor: KraftAdminAuditor,
     private val securityChain: SecurityProviderChain,
-    private val properties: KraftPulseSpringKraftAdminProperties,
+    private val properties: KraftAdminProperties,
 //    private val telemetryService: KraftTelemetryService
     paginationProperties: PaginationConfig,
-    lifecycleService: SpringKraftLifecycleService
+    lifecycleService: SpringKraftLifecycleService,
+    persistenceValidationService: PersistenceValidationService
 ) : KraftDataProvider<T> {
 
     private val logger = LoggerFactory.getLogger(JpaDataProvider::class.java)
@@ -1067,12 +1071,15 @@ class JpaDataProvider<T : Any>(
 
     private val fetchAllExecutor = FetchAll(
         entityClass, entityManager, transactionTemplate,
-        entityMetadata, rowMapper, paginationProperties
+        entityMetadata, rowMapper, paginationProperties, lifecycleService,
+        errorResolver = DefaultPersistenceErrorResolver()
     )
 
     private val fetchByIdExecutor = FetchById(
         entityClass, entityManager, transactionTemplate,
-        entityMetadata, rowMapper
+        entityMetadata, rowMapper,
+        lifecycle = lifecycleService,
+        errorResolver = DefaultPersistenceErrorResolver()
     )
 
     private val entitySaver = EntitySaver(
@@ -1083,11 +1090,14 @@ class JpaDataProvider<T : Any>(
         instantiator = EntityInstantiator(entityClass),
         propertyWriter = PropertyWriter(TypeConverter),
         relationshipWriter = RelationshipWriter(entityManager),
-        lifecycle = lifecycleService
+        lifecycle = lifecycleService,
+        errorResolver = DefaultPersistenceErrorResolver(),
+        validationService = persistenceValidationService,
     )
 
     private val entityDeleter = EntityDeleter(
-        entityClass, entityManager, transactionTemplate, entityMetadata, adminStorageProvider
+        entityClass, entityManager, transactionTemplate, entityMetadata, adminStorageProvider, lifecycleService,
+        DefaultPersistenceErrorResolver()
     )
 
     private val lookupProvider = LookupProvider(entityManager, applicationContext)
@@ -1114,24 +1124,35 @@ class JpaDataProvider<T : Any>(
      * reflect the server-assigned fields (e.g. generated ID, timestamps).
      */
     override fun save(name: String, data: Map<String, Any?>): Map<String, Any?> {
-        logger.error("name {}, data {}", name, data)
-        val id = data["id"]?.toString()?.takeIf { it.isNotBlank() }
+        logger.info("provider {}, data {}", name, data)
+
+        val rawId = data["id"]
+
+        val id = when (rawId) {
+            null -> null
+            is Number -> rawId.toLong().takeIf { it > 0 }?.toString()
+            else -> rawId.toString()
+                .trim()
+                .takeIf { it.isNotBlank() && it != "0" }
+        }
 
         val savedEntity = if (id != null) {
-            logger.error("save() → UPDATE {} #{}", entityClass.simpleName, id)
+            logger.info("save() → UPDATE {} #{}", entityClass.simpleName, id)
             entitySaver.update(id, data)
         } else {
-            logger.error("save() → CREATE {}", entityClass.simpleName)
+            logger.info("save() → CREATE {}", entityClass.simpleName)
             entitySaver.create(data)
         }
 
         if (savedEntity == null) {
-            logger.error("save() returned null for {} data={}", entityClass.simpleName, data.keys)
+            logger.error(
+                "save() returned null for {} data={}",
+                entityClass.simpleName,
+                data.keys
+            )
             return emptyMap()
         }
 
-        // Re-map the saved entity to a flat values map so the caller
-        // gets server-assigned fields (generated ID, timestamps, etc.)
         return try {
             rowMapper.mapEntityToData(savedEntity)
         } catch (e: Exception) {
@@ -1144,11 +1165,8 @@ class JpaDataProvider<T : Any>(
      * Deletes the entity with the given [id]. No-ops silently if not found
      * (idempotent — consistent with REST DELETE semantics).
      */
-    override fun delete(id: String) {
-        val deleted = entityDeleter.delete(id)
-        if (!deleted) {
-            logger.debug("delete() — entity {} #{} not found or already deleted", entityClass.simpleName, id)
-        }
+    override fun delete(id: String): KraftOperationResponse<Unit> {
+        return entityDeleter.delete(id)
     }
 
     /**
@@ -1163,7 +1181,8 @@ class JpaDataProvider<T : Any>(
         return lookupProvider.lookup(
             lookup = lookup,
             searchQuery = searchQuery,
-            limit = limit
+            limit = limit,
+//            displayField = ""
         )
     }
 

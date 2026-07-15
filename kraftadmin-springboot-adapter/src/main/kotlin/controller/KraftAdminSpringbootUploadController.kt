@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("\${kraftadmin.base-path:/admin}/api/uploads")
-@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class KraftAdminSpringbootUploadController(
     private val storageProvider: AdminStorageProvider
 ) {

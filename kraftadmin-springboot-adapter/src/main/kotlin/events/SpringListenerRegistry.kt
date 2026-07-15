@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
  * Results are cached in InMemoryListenerRegistry — zero reflection at dispatch time.
  */
 @Component
-@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class SpringListenerRegistry(
     private val applicationContext: ApplicationContext
 ) : KraftListenerRegistry {

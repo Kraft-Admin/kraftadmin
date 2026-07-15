@@ -17,7 +17,7 @@ dependencyManagement {
 
 dependencies {
     api(project(":kraftadmin-core"))
-    api(project(":kraftpulse-springboot-adapter"))
+//    api(project(":kraftpulse-springboot-adapter"))
 
     // Spring APIs — consumer provides these
     compileOnly("org.springframework.boot:spring-boot-autoconfigure")

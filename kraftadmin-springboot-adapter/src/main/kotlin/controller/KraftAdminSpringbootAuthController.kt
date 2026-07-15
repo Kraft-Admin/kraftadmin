@@ -1,5 +1,4 @@
-package com.kraftadmin.controller
-
+package controller
 
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
@@ -36,7 +35,7 @@ import java.util.*
 @RestController
 @RequestMapping("\${kraftadmin.base-path:/admin}/api/auth")
 @Conditional(NoFrameworkSecurityCondition::class)
-@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class KraftAdminSpringbootAuthController(
     private val chain: SecurityProviderChain,
     private val sessionStore: AdminSessionStore,

@@ -1,10 +1,7 @@
 package events
 
 import actions.ActionHandlerEntry
-import com.kraftadmin.context.KraftActionContext
 import actions.KraftActionResponse
-import binder.JacksonInputBinder
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory
@@ -13,7 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 
 @Service
-@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class SpringKraftCustomActionService(
     private val descriptorFactory: KraftAdminDescriptorFactory,
     private val actionRegistry: SpringActionRegistry,

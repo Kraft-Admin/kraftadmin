@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component
  */
 @Component
 @ConditionalOnProperty(
-    prefix = "kraftpulse",
+    prefix = "kraftadmin",
     name = ["enabled"],
     havingValue = "true"
 )

@@ -23,7 +23,7 @@ kotlin {
 
 dependencies {
     api(project(":kraftadmin-core"))
-    api(project(":kraft-pulse"))
+//    api(project(":kraft-pulse"))
     api(project(":kraftadmin-springboot-adapter"))
     implementation(project(":kraftadmin-ui"))
 
@@ -40,7 +40,7 @@ tasks.named<ShadowJar>("shadowJar") {
     archiveBaseName.set("kraft-admin")
     archiveClassifier.set("")
 
-    dependsOn(":kraft-pulse:shadowJar")
+//    dependsOn(":kraft-pulse:shadowJar")
 
     // Relocate Jackson — hides it from consumer's classpath
     relocate("com.fasterxml.jackson", "com.kraftadmin.shaded.jackson") {
