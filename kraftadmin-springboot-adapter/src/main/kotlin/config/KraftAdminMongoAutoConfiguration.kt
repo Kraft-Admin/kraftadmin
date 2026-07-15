@@ -1,7 +1,7 @@
 package com.kraftadmin.config
 
 import com.kraftadmin.spi.EntityDiscoverer
-import com.kraftadmin.discovery.MongoDocumentDiscoverer
+import discovery.discoverer.mongo.MongoDocumentDiscoverer
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
@@ -13,7 +13,7 @@ import org.springframework.data.mongodb.core.mapping.MongoMappingContext
 
 @AutoConfiguration
 @ConditionalOnClass(name = ["org.springframework.data.mongodb.core.MongoTemplate"])
-@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class KraftAdminMongoAutoConfiguration {
 
     private val logger = LoggerFactory.getLogger(javaClass)
