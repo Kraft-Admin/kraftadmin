@@ -34,9 +34,10 @@ class CloudinaryProvider(
             // Invoke uploader.upload(bytes, params) reflectively
             val uploadMethod = uploader.javaClass.getMethod(
                 "upload",
-                ByteArray::class.java,
+                Any::class.java, // Cloudinary uses 'Object' in the SDK for the first param
                 Map::class.java
             )
+
             val uploadResult = uploadMethod.invoke(uploader, bytes, params) as Map<*, *>
 
             // Extract the return path target
