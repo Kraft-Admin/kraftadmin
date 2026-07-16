@@ -9,6 +9,7 @@ import com.kraftadmin.ui_descriptors.ElementCollectionShape
 import com.kraftadmin.ui_descriptors.EmbeddableFieldDescriptor
 import com.kraftadmin.ui_descriptors.ValueType
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
+import discovery.descriptors.column.resolvers.EnumHelper
 import jakarta.persistence.Transient
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
@@ -83,22 +84,33 @@ class JpaSubColumnBuilder(
                 null
             }
 
+//            val enumOptions =
+//                if (type == FormInputType.SELECT) {
+//
+//                    (prop.returnType.classifier as? KClass<*>)
+//                        ?.java
+//                        ?.enumConstants
+//                        ?.map {
+//                            SelectOption(
+//                                label = it.toString(),
+//                                value = it.toString()
+//                            )
+//                        }
+//
+//                } else {
+//                    null
+//                }
+
             val enumOptions =
-                if (type == FormInputType.SELECT) {
-
-                    (prop.returnType.classifier as? KClass<*>)
-                        ?.java
-                        ?.enumConstants
-                        ?.map {
-                            SelectOption(
-                                label = it.toString(),
-                                value = it.toString()
-                            )
-                        }
-
-                } else {
-                    null
-                }
+                if (type == FormInputType.SELECT){
+                    val enumClass = (prop.returnType.classifier as? KClass<*>)?.java
+                    if (enumClass?.isEnum == true) {
+                        @Suppress("UNCHECKED_CAST")
+                        EnumHelper.getSelectOptions(enumClass as Class<out Enum<*>>)
+                    } else {
+                        null
+                    }
+                }else null
 
             val elementCollectionMeta = ElementCollectionResolver.resolve(javaField)
 

@@ -6,6 +6,7 @@ import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.spi.SelectOption
 import com.kraftadmin.ui_descriptors.ElementCollectionDescriptor
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
+import discovery.descriptors.column.resolvers.EnumHelper
 import jakarta.persistence.*
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
@@ -111,20 +112,32 @@ class JpaColumnResolver(
                     null
                 }
 
+//            val selectOptions =
+//                if (type == FormInputType.SELECT) {
+//                    (property.returnType.classifier as? KClass<*>)
+//                        ?.java
+//                        ?.enumConstants
+//                        ?.map {
+//                            SelectOption(
+//                                it.toString(),
+//                                it.toString()
+//                            )
+//                        }
+//                } else {
+//                    null
+//                }
+
+
             val selectOptions =
-                if (type == FormInputType.SELECT) {
-                    (property.returnType.classifier as? KClass<*>)
-                        ?.java
-                        ?.enumConstants
-                        ?.map {
-                            SelectOption(
-                                it.toString(),
-                                it.toString()
-                            )
-                        }
-                } else {
-                    null
-                }
+                if (type == FormInputType.SELECT){
+                    val enumClass = (property.returnType.classifier as? KClass<*>)?.java
+                    if (enumClass?.isEnum == true) {
+                        @Suppress("UNCHECKED_CAST")
+                        EnumHelper.getSelectOptions(enumClass as Class<out Enum<*>>)
+                    } else {
+                        null
+                    }
+                } else null
 
             val wysiwyg =
                 if (type == FormInputType.WYSIWYG) {

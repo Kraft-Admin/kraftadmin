@@ -210,5 +210,20 @@ data class ValueDescriptor(
 
     val fields: List<EmbeddableFieldDescriptor> = emptyList(),
 
-    val collection: ElementCollectionDescriptor? = null
+    val collection: ElementCollectionDescriptor? = null,
+
+    /**
+     * How the frontend should render this value. Always populated — either
+     * from an explicit @KraftAdminField(inputType = ...) override on the
+     * owning field, or inferred from [type] via a sensible default. The
+     * frontend should never need to guess a widget from [type] alone.
+     */
+    val inputType: com.kraftadmin.enums.FormInputType? = null,
+
+    /**
+     * Upload constraints, populated only when [inputType] is one of the
+     * file-backed types (IMAGE, FILE, VIDEO, AUDIO, DOCUMENT).
+     */
+    val fileOptions: FileConfigDescriptor? = null,
+
 )
