@@ -3,60 +3,123 @@ package persistence.jpa.delete
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.utils.files.AdminStorageProvider
+import jakarta.persistence.CascadeType
+import jakarta.persistence.Embedded
+import jakarta.persistence.ManyToMany
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
 import org.slf4j.LoggerFactory
+import java.lang.reflect.Field
+import java.util.Collections
+import java.util.IdentityHashMap
 
-class FileCleanupService(private val adminStorageProvider: AdminStorageProvider) {
-    private val logger = LoggerFactory.getLogger(FileCleanupService::class.java)
+class FileCleanupService(
+    private val adminStorageProvider: AdminStorageProvider
+) {
 
-    private val FILE_INPUTS = setOf(
-        FormInputType.IMAGE, FormInputType.VIDEO, FormInputType.AUDIO,
-        FormInputType.FILE, FormInputType.DOCUMENT
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    private val fileInputs = setOf(
+        FormInputType.IMAGE,
+        FormInputType.VIDEO,
+        FormInputType.AUDIO,
+        FormInputType.FILE,
+        FormInputType.DOCUMENT
     )
 
     fun cleanupFiles(instance: Any?) {
         if (instance == null) return
+
+        val visited =
+            Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+
+        cleanup(instance, visited)
+    }
+
+    private fun cleanup(
+        instance: Any,
+        visited: MutableSet<Any>
+    ) {
+
+        if (!visited.add(instance)) {
+            return
+        }
 
         var type: Class<*>? = instance.javaClass
 
         while (type != null && type != Any::class.java) {
 
             type.declaredFields.forEach { field ->
-                field.isAccessible = true
 
-                val value = runCatching {
-                    field.get(instance)
-                }.getOrNull() ?: return@forEach
+                runCatching {
 
-                logger.info("Field: {} value={}", field.name, value)
+                    field.isAccessible = true
 
-                val annotation = field.getAnnotation(KraftAdminField::class.java)
+                    val value = field.get(instance)
+                        ?: return@runCatching
 
-                logger.info(
-                    "Field {} annotation={}",
-                    field.name,
-                    annotation?.inputType
-                )
+                    val adminField =
+                        field.getAnnotation(KraftAdminField::class.java)
 
-                if (annotation != null) {
-
-                    if (annotation.inputType !in FILE_INPUTS) {
-                        return@forEach
+                    if (
+                        adminField != null &&
+                        adminField.inputType in fileInputs
+                    ) {
+                        deleteFieldValue(value)
+                        return@runCatching
                     }
 
-                    deleteFieldValue(value)
-                    return@forEach
+                    when {
+
+                        field.isAnnotationPresent(Embedded::class.java) ->
+                            recurse(value, visited)
+
+                        field.shouldCascadeDelete() ->
+                            recurse(value, visited)
+                    }
+
+                }.onFailure {
+
+                    logger.debug(
+                        "Ignoring cleanup failure for {}.{}",
+//                        type.simpleName,
+                        field.name,
+                        it
+                    )
+
                 }
 
-                // Legacy fallback
-                cleanupUnknownValue(value)
             }
 
             type = type.superclass
         }
     }
 
-    private fun deleteFieldValue(value: Any?) {
+    private fun recurse(
+        value: Any,
+        visited: MutableSet<Any>
+    ) {
+
         when (value) {
+
+            is Collection<*> ->
+                value.filterNotNull()
+                    .forEach { cleanup(it, visited) }
+
+            is Array<*> ->
+                value.filterNotNull()
+                    .forEach { cleanup(it, visited) }
+
+            else ->
+                cleanup(value, visited)
+        }
+    }
+
+    private fun deleteFieldValue(value: Any) {
+
+        when (value) {
+
             is String ->
                 deleteIfManaged(value)
 
@@ -70,75 +133,48 @@ class FileCleanupService(private val adminStorageProvider: AdminStorageProvider)
         }
     }
 
-    private fun cleanupUnknownValue(value: Any?) {
-        when (value) {
+    private fun Field.shouldCascadeDelete(): Boolean {
 
-            null,
-            is Number,
-            is Boolean,
-            is Enum<*>,
-            is CharSequence,
-            is Map<*, *> -> return
+        val cascades = when {
 
-            is Collection<*> -> {
-                value.filterIsInstance<String>()
-                    .filter(::looksLikeManagedFile)
-                    .forEach(::deleteIfManaged)
-            }
+            isAnnotationPresent(OneToOne::class.java) ->
+                getAnnotation(OneToOne::class.java).cascade
 
-            is Array<*> -> {
-                value.filterIsInstance<String>()
-                    .filter(::looksLikeManagedFile)
-                    .forEach(::deleteIfManaged)
-            }
+            isAnnotationPresent(OneToMany::class.java) ->
+                getAnnotation(OneToMany::class.java).cascade
 
-            is String -> {
-                if (looksLikeManagedFile(value)) {
-                    deleteIfManaged(value)
-                }
-            }
+            isAnnotationPresent(ManyToOne::class.java) ->
+                getAnnotation(ManyToOne::class.java).cascade
 
-            else -> {
-                val pkg = value.javaClass.`package`?.name ?: ""
-                if (!pkg.startsWith("java.") && !pkg.startsWith("kotlin.")) {
-                    cleanupFiles(value)
-                }
-            }
-        }
-    }
+            isAnnotationPresent(ManyToMany::class.java) ->
+                getAnnotation(ManyToMany::class.java).cascade
 
-    private fun looksLikeManagedFile(url: String): Boolean {
-
-        if (!adminStorageProvider.contains(url)) {
-            return false
+            else ->
+                return false
         }
 
-        val extension = url
-            .substringAfterLast('.', "")
-            .substringBefore('?')
-            .lowercase()
-
-        return extension in setOf(
-            "jpg","jpeg","png","gif","webp","svg",
-            "mp4","mov","webm",
-            "mp3","wav","ogg","aac","flac",
-            "pdf","doc","docx","xls","xlsx","ppt","pptx",
-            "txt","csv",
-            "zip","rar","gz"
-        )
+        return CascadeType.ALL in cascades ||
+                CascadeType.REMOVE in cascades
     }
 
     private fun deleteIfManaged(url: String) {
+
         if (!adminStorageProvider.contains(url)) {
             return
         }
 
-        try {
+        runCatching {
             adminStorageProvider.delete(url)
-            logger.debug("Deleted uploaded file {}", url)
-        } catch (e: Exception) {
-            logger.warn("Failed deleting file {}", url, e)
         }
+            .onSuccess {
+                logger.debug("Deleted uploaded file {}", url)
+            }
+            .onFailure {
+                logger.warn(
+                    "Failed deleting uploaded file {}",
+                    url,
+                    it
+                )
+            }
     }
-
 }
