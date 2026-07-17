@@ -1,5 +1,8 @@
 package com.kraftadmin.utils.validation
 
+import com.kraftadmin.enums.ProviderType
+import java.lang.reflect.Field
+
 interface KraftValidationExtractor {
     /**
      * Scans field/property and returns the DSL string (e.g. "required|email")

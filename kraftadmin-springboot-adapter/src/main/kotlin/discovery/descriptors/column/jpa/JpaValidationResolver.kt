@@ -1,6 +1,6 @@
 package discovery.descriptors.column.jpa
 
-import validation.JakartaValidationExtractor
+import util.JakartaValidationExtractor
 import java.lang.reflect.Field
 
 class JpaValidationResolver {

@@ -7,6 +7,7 @@ import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.utils.validation.KraftValidationExtractor
 import org.slf4j.LoggerFactory
+import validation.ValidationRuleBuilder
 import kotlin.Annotation as JavaAnnotation
 import java.lang.reflect.Field
 
@@ -99,25 +100,10 @@ class JakartaValidationExtractor : KraftValidationExtractor {
         // --- 1. KraftAdminField (always available — our own annotation) ---
         val admin = KraftAnnotationUtils.getAnnotation(f, KraftAdminField::class)
 
-        if (admin != null) {
+        // 1. KraftAdminField rules via Builder
+        KraftAnnotationUtils.getAnnotation(f, KraftAdminField::class)?.let { admin ->
             if (admin.required) rules.add("required")
-            if (admin.regex.isNotEmpty()) rules.add("regex:${admin.regex}")
-
-            when (admin.inputType) {
-                FormInputType.TEXT, FormInputType.TEXTAREA, FormInputType.WYSIWYG -> rules.add("string")
-                FormInputType.NUMBER, FormInputType.RANGE -> rules.add("numeric")
-                FormInputType.COLOR -> rules.add("hexColor")
-                FormInputType.EMAIL -> rules.add("email")
-                FormInputType.TEL -> rules.add("tel")
-                FormInputType.URL -> rules.add("url")
-                FormInputType.PASSWORD -> {
-                    rules.add("minLength:8")
-                    rules.add("mustContainUppercase")
-                    rules.add("mustContainSpecialChar")
-                }
-                FormInputType.DATE, FormInputType.DATETIME, FormInputType.TIME -> rules.add("date")
-                else -> {}
-            }
+            rules.addAll(ValidationRuleBuilder.getBaseRules(f))
         }
 
         // --- 2. Requirement checks — string-based, safe if jakarta.validation absent ---
@@ -164,11 +150,13 @@ class JakartaValidationExtractor : KraftValidationExtractor {
         val messages = mutableMapOf<String, String>()
 
         val adminField = KraftAnnotationUtils.getAnnotation(f, KraftAdminField::class)
+        val label = adminField?.label?.ifBlank { f.name } ?: f.name
 
         // 1. Manual overrides — always available
-        if (adminField != null && adminField.validationMessage.isNotEmpty()) {
-            if (adminField.required) messages["required"] = adminField.validationMessage
-            messages["regex"] = adminField.validationMessage
+        if (adminField != null) {
+            messages.putAll(ValidationRuleBuilder.getBaseMessages(f))
+            if (adminField.required) messages.putIfAbsent("required", "$label is required")
+            if (adminField.validationMessage.isNotBlank()) messages["regex"] = adminField.validationMessage
         }
 
         // 2. Jakarta overrides — string-based, safe if absent
@@ -258,6 +246,7 @@ class JakartaValidationExtractor : KraftValidationExtractor {
                     "hexColor" -> str.matches(Regex("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"))
                     "tel" -> str.length >= 7
                     "numeric" -> str.toDoubleOrNull() != null
+                    "url" -> str.matches(Regex("^(https?://)?[\\w.-]+\\.[a-z]{2,}(/\\S*)?$", RegexOption.IGNORE_CASE))
                     else -> true
                 }
                 if (!valid) errors.add(messages?.get(rule) ?: "Invalid $rule")

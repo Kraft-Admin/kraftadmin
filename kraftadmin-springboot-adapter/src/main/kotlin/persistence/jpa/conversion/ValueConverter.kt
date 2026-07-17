@@ -4,7 +4,6 @@ import api.utils.ObjectResponse
 import jakarta.persistence.*
 import org.slf4j.LoggerFactory
 import persistence.jpa.metadata.AssociationResolver
-import persistence.jpa.metadata.PropertyResolver
 import persistence.jpa.util.HibernateUtil
 import java.lang.reflect.Field
 
@@ -66,15 +65,11 @@ object ValueConverter {
         return try {
             val id = AssociationResolver.extractId(value)?.toString() ?: return null
             val label = AssociationResolver.resolveDisplayLabel(value) ?: id
-            ObjectResponse(id = id, displayField = label)
+            ObjectResponse(id = id, label = label)
         } catch (e: Exception) {
             logger.warn("Could not convert relation ${field.name}: ${e.message}")
             null
         }
-    }
-
-    private fun convertElementCollection(value: Any?): List<String?> {
-        return if (value is Collection<*>) value.map { it?.toString() } else emptyList()
     }
 
     private fun convertCollectionRelation(value: Any?): List<ObjectResponse?> {
@@ -83,9 +78,75 @@ object ValueConverter {
             val real = HibernateUtil.unproxy(item) ?: return@map null
             val id = AssociationResolver.extractId(real)?.toString() ?: return@map null
             val label = AssociationResolver.resolveDisplayLabel(real) ?: id
-            ObjectResponse(id = id, displayField = label)
+            ObjectResponse(id = id, label = label)
         }
     }
+
+    private fun convertElementCollection(value: Any?): Any? {
+        if (value == null) return emptyList<Any>()
+
+        return when (value) {
+            is Map<*, *> -> convertElementCollectionMap(value)
+            is Collection<*> -> convertElementCollectionList(value)
+            else -> emptyList<Any>()
+        }
+    }
+
+    private fun convertElementCollectionList(value: Collection<*>): List<Any?> {
+        return value.map { element ->
+            val real = HibernateUtil.unproxy(element)
+            when {
+                real == null -> null
+                real.javaClass.isAnnotationPresent(Embeddable::class.java) -> mapEntityToValues(real)
+                else -> real
+            }
+        }
+    }
+
+    // Emits the SAME {key, value} row shape the FE sends on write (FormDataCoercer / RelationshipWriter),
+// so read and write are symmetric — no shape mismatch, no separate FE parsing branch needed.
+    private fun convertElementCollectionMap(value: Map<*, *>): List<Map<String, Any?>> {
+        return value.entries.map { (k, v) ->
+            val realKey = HibernateUtil.unproxy(k)
+            val realValue = HibernateUtil.unproxy(v)
+
+            val convertedKey: Any? = when {
+                realKey == null -> null
+                realKey.javaClass.isAnnotationPresent(Embeddable::class.java) -> mapEntityToValues(realKey)
+                else -> realKey
+            }
+
+            val convertedValue: Any? = when {
+                realValue == null -> null
+                realValue.javaClass.isAnnotationPresent(Embeddable::class.java) -> mapEntityToValues(realValue)
+                else -> realValue
+            }
+
+            mapOf("key" to convertedKey, "value" to convertedValue)
+        }
+    }
+
+    private fun convertElement(value: Any?): Any? {
+
+        val real = HibernateUtil.unproxy(value)
+
+        return when {
+
+            real == null ->
+                null
+
+            real.javaClass.isAnnotationPresent(Embeddable::class.java) ->
+                mapEntityToValues(real)
+
+            else ->
+                real
+        }
+    }
+
+    private fun Map<*, *>.mapEntries(): Map<Any?, Any?> =
+        entries.associate { (k, v) ->
+            convertElement(k) to convertElement(v)
+        }
 
 
     /**
@@ -119,4 +180,43 @@ object ValueConverter {
         }
         return result
     }
+
+
+    fun mapEntityToValues(
+        entity: Any?,
+        fieldsToRead: Collection<String>
+    ): Map<String, Any?> {
+
+        if (entity == null) return emptyMap()
+
+        val wanted = fieldsToRead.toHashSet()
+        val result = mutableMapOf<String, Any?>()
+
+        var clazz: Class<*>? = entity.javaClass
+
+        while (clazz != null && clazz != Any::class.java) {
+
+            for (field in clazz.declaredFields) {
+
+                if (field.name !in wanted) continue
+
+                if (result.containsKey(field.name) ||
+                    java.lang.reflect.Modifier.isStatic(field.modifiers)
+                ) continue
+
+                try {
+                    field.isAccessible = true
+                    val rawValue = field.get(entity)
+                    result[field.name] = convert(field, rawValue)
+                } catch (e: Exception) {
+                    logger.debug("Skipping field ${field.name}: ${e.message}")
+                }
+            }
+
+            clazz = clazz.superclass
+        }
+
+        return result
+    }
+
 }
