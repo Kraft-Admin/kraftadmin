@@ -1,11 +1,10 @@
 package persistence.jpa.query
 
+import com.kraftadmin.query.KraftFilter
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.Predicate
 import jakarta.persistence.criteria.Root
 import org.slf4j.LoggerFactory
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 /**
  * Builds JPA criteria Predicates from filter descriptors.
@@ -21,12 +20,54 @@ object PredicateBuilder {
         data class Like(val field: String, val value: String) : Filter()
         data class GreaterThan(val field: String, val value: Comparable<Any>) : Filter()
         data class LessThan(val field: String, val value: Comparable<Any>) : Filter()
-        data class Between(val field: String, val from: Comparable<Any>, val to: Comparable<Any>) : Filter()
+        data class Between(
+            val field: String,
+            val from: Comparable<Any>,
+            val to: Comparable<Any>
+        ) : Filter()
+
         data class In(val field: String, val values: List<Any>) : Filter()
         data class IsNull(val field: String) : Filter()
         data class IsNotNull(val field: String) : Filter()
         data class Search(val fields: List<String>, val value: String) : Filter()
     }
+
+    /**
+     * Converts adapter-specific filters into framework-wide filters
+     * suitable for lifecycle events.
+     */
+    fun toEventFilters(filters: List<Filter>): List<KraftFilter> =
+        filters.map(::toEventFilter)
+
+    private fun toEventFilter(filter: Filter): KraftFilter =
+        when (filter) {
+            is Filter.Equals ->
+                KraftFilter.Equals(filter.field, filter.value)
+
+            is Filter.Like ->
+                KraftFilter.Like(filter.field, filter.value)
+
+            is Filter.GreaterThan ->
+                KraftFilter.GreaterThan(filter.field, filter.value)
+
+            is Filter.LessThan ->
+                KraftFilter.LessThan(filter.field, filter.value)
+
+            is Filter.Between ->
+                KraftFilter.Between(filter.field, filter.from, filter.to)
+
+            is Filter.In ->
+                KraftFilter.In(filter.field, filter.values)
+
+            is Filter.IsNull ->
+                KraftFilter.IsNull(filter.field)
+
+            is Filter.IsNotNull ->
+                KraftFilter.IsNotNull(filter.field)
+
+            is Filter.Search ->
+                KraftFilter.Search(filter.fields, filter.value)
+        }
 
     fun <T> build(
         cb: CriteriaBuilder,
@@ -87,25 +128,32 @@ object PredicateBuilder {
             is Filter.IsNotNull ->
                 cb.isNotNull(root.get<Any>(filter.field))
 
-            // ✅ Full-text search across multiple fields — used by the
-            // admin table's global search box
             is Filter.Search -> {
-                if (filter.fields.isEmpty()) return null
+                if (filter.fields.isEmpty()) {
+                    return null
+                }
+
                 val predicates = filter.fields.map { field ->
                     cb.like(
-                        cb.lower(cb.function("CAST", String::class.java, root.get<Any>(field))),
+                        cb.lower(
+                            cb.function(
+                                "CAST",
+                                String::class.java,
+                                root.get<Any>(field)
+                            )
+                        ),
                         "%${filter.value.lowercase()}%"
                     )
                 }
+
                 cb.or(*predicates.toTypedArray())
             }
         }
     }
 
     /**
-     * Converts a raw search string into a list of LIKE predicates
-     * across the provided searchable fields. Used by FetchAll when
-     * a global search query is present.
+     * Converts a raw search string into LIKE predicates across the
+     * configured searchable fields.
      */
     fun <T> searchPredicates(
         cb: CriteriaBuilder,
@@ -113,28 +161,27 @@ object PredicateBuilder {
         searchQuery: String,
         searchableFields: List<String>
     ): Predicate? {
-        if (searchQuery.isBlank() || searchableFields.isEmpty()) return null
+
+        if (searchQuery.isBlank() || searchableFields.isEmpty())
+            return null
 
         val predicates = searchableFields.mapNotNull { field ->
             try {
-                // Get the path to the field
-                val path = root.get<Any>(field)
-
-                // USE BACKTICKS to call the 'as' method
-                val stringPath = path.`as`(String::class.java)
-
-                // Build the LIKE predicate
                 cb.like(
-                    cb.lower(stringPath),
+                    cb.lower(root.get<Any>(field).`as`(String::class.java)),
                     "%${searchQuery.lowercase()}%"
                 )
             } catch (e: Exception) {
-                logger.error("Failed to build search predicate for field '$field': ${e.message}")
+                logger.error(
+                    "Failed to build search predicate for field '$field': ${e.message}"
+                )
                 null
             }
         }
 
-        return if (predicates.isEmpty()) null else cb.or(*predicates.toTypedArray())
+        return if (predicates.isEmpty())
+            null
+        else
+            cb.or(*predicates.toTypedArray())
     }
-
 }

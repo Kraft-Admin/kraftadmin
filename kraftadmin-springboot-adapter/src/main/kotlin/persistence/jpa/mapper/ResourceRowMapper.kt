@@ -30,30 +30,27 @@ class ResourceRowMapper(
      * No related-resource expansion. Called for every row in FetchAll.
      */
     fun mapToRow(entity: Any, columns: List<KraftAdminColumn>): ResourceRow {
+
         val real = HibernateUtil.unproxy(entity) ?: entity
         val id = AssociationResolver.extractId(real)?.toString() ?: ""
 
-        val allValues = ValueConverter.mapEntityToValues(real)
-
         val timestampFields = setOf(
             "createdAt",
-            "updatedAt",
-//            "createdDate",
-//            "lastModifiedDate"
+            "updatedAt"
         )
 
-        // First 8 inferred/display columns (excluding timestamps)
         val selectedColumns = columns
             .filter { it.name !in timestampFields }
             .take(8)
             .map { it.name }
 
-        // Then append timestamps if present
-        val allowed = (selectedColumns +
-                timestampFields.filter { allValues.containsKey(it) })
-            .toSet()
+        val allowedFields =
+            (selectedColumns + timestampFields).toSet()
 
-        val values = allValues.filterKeys { it in allowed }
+        val values = ValueConverter.mapEntityToValues(
+            real,
+            allowedFields
+        )
 
         return ResourceRow(
             id = id,

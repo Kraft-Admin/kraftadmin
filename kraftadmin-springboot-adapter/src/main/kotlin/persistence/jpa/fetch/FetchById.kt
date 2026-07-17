@@ -1,52 +1,17 @@
-//package persistence.jpa.fetch
-//
-//import api.utils.ResourceRow
-//import com.kraftadmin.spi.KraftAdminColumn
-//import jakarta.persistence.EntityManager
-//import org.slf4j.LoggerFactory
-//import org.springframework.transaction.support.TransactionTemplate
-//import persistence.jpa.mapper.ResourceRowMapper
-//import persistence.jpa.metadata.EntityMetadata
-//import persistence.jpa.util.HibernateUtil
-//import kotlin.reflect.KClass
-//
-///**
-// * Handles single-entity fetch by ID.
-// */
-//class FetchById<T : Any>(
-//    private val entityClass: KClass<T>,
-//    private val entityManager: EntityManager,
-//    private val transactionTemplate: TransactionTemplate,
-//    private val metadata: EntityMetadata<T>,
-//    private val rowMapper: ResourceRowMapper
-//) {
-//    private val logger = LoggerFactory.getLogger(FetchById::class.java)
-//
-//    fun execute(id: String, columns: List<KraftAdminColumn>): ResourceRow? {
-//        return transactionTemplate.execute { _ ->
-//            try {
-//                val convertedId = metadata.convertId(entityManager, id)
-//                val entity = entityManager.find(entityClass.java, convertedId)
-//                if (entity != null) {
-//                    metadata.ensureLobsInitialized(entity)
-//                    // map also relations for display in ui
-//                    rowMapper.mapToRow(HibernateUtil.unproxy(entity) ?: entity, columns)
-//                } else null
-//            } catch (e: Exception) {
-//                logger.error("FetchById error for ${entityClass.simpleName}#$id: ${e.message}", e)
-//                null
-//            }
-//        }
-//    }
-//}
-
 package persistence.jpa.fetch
 
 import api.utils.ResourceRow
+import com.kraftadmin.context.KraftAdminContextHolder
+import com.kraftadmin.events.KraftAdminEvent
+import com.kraftadmin.events.KraftLifecycleService
 import com.kraftadmin.spi.KraftAdminColumn
 import jakarta.persistence.EntityManager
+import jakarta.persistence.EntityNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.support.TransactionTemplate
+import persistence.error.PersistenceError
+import persistence.error.PersistenceErrorResolver
+import persistence.error.PersistenceException
 import persistence.jpa.mapper.ResourceRowMapper
 import persistence.jpa.metadata.EntityMetadata
 import persistence.jpa.util.HibernateUtil
@@ -57,54 +22,80 @@ class FetchById<T : Any>(
     private val entityManager: EntityManager,
     private val transactionTemplate: TransactionTemplate,
     private val metadata: EntityMetadata<T>,
-    private val rowMapper: ResourceRowMapper
+    private val rowMapper: ResourceRowMapper,
+    private val lifecycle: KraftLifecycleService,
+    val errorResolver: PersistenceErrorResolver
 ) {
     private val logger = LoggerFactory.getLogger(FetchById::class.java)
 
     fun execute(id: String, columns: List<KraftAdminColumn>): ResourceRow? {
+        val context = KraftAdminContextHolder.eventContext()
+
         return transactionTemplate.execute { _ ->
             try {
-                val convertedId = metadata.convertId(entityManager, id)
-                val entity = entityManager.find(entityClass.java, convertedId)
-                    ?: return@execute null
+                lifecycle.onBeforeFetchById(
+                    KraftAdminEvent.BeforeFetchById(
+                        resourceName = entityClass.simpleName!!,
+                        id = id,
+                        context = context
+                    )
+                )
 
-                // ✅ Initialize ALL lazy associations before the transaction closes
+                val convertedId = metadata.convertId(id)
+
+                val entity = entityManager.find(entityClass.java, convertedId)
+                    ?: throw EntityNotFoundException(
+                        "${entityClass.simpleName} '$id' not found."
+                    )
+
+                // Initialize ALL lazy associations before the transaction closes
                 // RelatedResourceFetcher needs collections to be in memory
                 metadata.ensureLobsInitialized(entity)
 
+//                metadata.ensureLobsInitialized(entity)
+
+                metadata.ensureSingleRelationsInitialized(
+                    entity
+                )
+
+
                 val real = HibernateUtil.unproxy(entity) ?: entity
 
-                // ✅ mapToDetailRow — includes related resources (max 10 each)
-                // This is the ONLY place this method is called
-                rowMapper.mapToDetailRow(real, columns)
+                val row = rowMapper.mapToDetailRow(real, columns)
+
+                logger.info(row.toString())
+
+                lifecycle.onAfterFetchById(
+                    KraftAdminEvent.AfterFetchById(
+                        resourceName = entityClass.simpleName!!,
+                        entity = real,
+                        id = id,
+                        context = context
+                    )
+                )
+
+                row
 
             } catch (e: Exception) {
+
                 logger.error(
                     "FetchById error for ${entityClass.simpleName}#$id: ${e.message}", e
                 )
-                null
+                lifecycle.onFetchByIdFailed(
+                    KraftAdminEvent.FetchByIdFailed(
+                        resourceName = entityClass.simpleName!!,
+                        id = id,
+                        exception = e,
+                        context = context
+                    )
+                )
+
+                throw PersistenceException(
+                    errorResolver.resolve(entityClass.simpleName ?: "Resource", e),
+                    e
+                )
+
             }
-        }
-    }
-
-    /**
-     * Returns the raw JPA entity without mapping it to a ResourceRow.
-     */
-    fun fetchRaw(id: String): T? {
-        return transactionTemplate.execute { _ ->
-            try {
-                val convertedId = metadata.convertId(entityManager, id)
-                val entity = entityManager.find(entityClass.java, convertedId)
-
-                if (entity != null) {
-                    // Ensure the object is not a proxy and LOBs are loaded
-                    metadata.ensureLobsInitialized(entity)
-                    HibernateUtil.unproxy(entity) ?: entity
-                } else null
-            } catch (e: Exception) {
-                logger.error("FetchRaw error for ${entityClass.simpleName}#$id: ${e.message}", e)
-                null
-            } as T?
         }
     }
 
@@ -115,7 +106,7 @@ class FetchById<T : Any>(
     fun fetchEntity(id: String): T? {
         return transactionTemplate.execute {
             try {
-                val convertedId = metadata.convertId(entityManager, id)
+                val convertedId = metadata.convertId( id)
 
                 val entity = entityManager.find(entityClass.java, convertedId)
                     ?: return@execute null
@@ -132,5 +123,6 @@ class FetchById<T : Any>(
             }
         }
     }
+
 
 }

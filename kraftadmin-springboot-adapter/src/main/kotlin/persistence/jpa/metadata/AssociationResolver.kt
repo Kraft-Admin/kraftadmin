@@ -18,31 +18,6 @@ object AssociationResolver {
 
     private val logger = LoggerFactory.getLogger(AssociationResolver::class.java)
 
-    fun extractId1(entity: Any): Any? {
-        val clean = unproxy(entity) ?: return null
-        var currentClass: Class<*>? = clean.javaClass
-
-        while (currentClass != null && currentClass != Any::class.java) {
-            // Find by annotation or provider
-            val idField = currentClass.declaredFields.find {
-                it.isAnnotationPresent(Id::class.java) || it.name == "id"
-            }
-
-            if (idField != null) {
-                return try {
-                    idField.isAccessible = true
-                    idField.get(clean)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-            // Move up the hierarchy to find ID in BaseEntity
-            currentClass = currentClass.superclass
-        }
-
-        return null
-    }
-
     fun extractId(entity: Any): Any? {
         val real = unproxy(entity) ?: return null
 
@@ -84,16 +59,6 @@ object AssociationResolver {
         }
     }
 
-    //     extracts the name of @Id annoted fields
-    fun getIdPropertyName1(type: KClass<*>): String {
-        return type.memberProperties
-            .firstOrNull {
-                it.javaField?.isAnnotationPresent(jakarta.persistence.Id::class.java) == true ||
-                        it.javaField?.isAnnotationPresent(org.springframework.data.annotation.Id::class.java) == true
-            }
-            ?.name
-            ?: "id"
-    }
 
     fun getIdPropertyName(type: KClass<*>): String {
         return findIdField(type.java)?.name
