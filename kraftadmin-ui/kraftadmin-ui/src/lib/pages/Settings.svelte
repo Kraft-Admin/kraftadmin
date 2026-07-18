@@ -91,7 +91,7 @@ async function save() {
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
       <h1 class="text-2xl font-black text-text-main uppercase tracking-tighter">System Settings</h1>
-      <p class="text-text-muted text-sm">Orchestrate your KraftAdmin instance parameters.</p>
+      <p class="text-text-muted text-sm">Modify your KraftAdmin instance parameters.</p>
     </div>
     <button 
       on:click={save} 
@@ -250,12 +250,12 @@ async function save() {
                 </div>
                 <input type="checkbox" bind:checked={editableSettings.telemetryConfig.enabled} class="w-6 h-6 accent-brand-primary cursor-pointer" />
               </div>
-              {#if editableSettings.telemetryConfig.enabled}
+              <!-- {#if editableSettings.telemetryConfig.enabled}
                 <div class="space-y-2">
                   <label class="text-[10px] font-black uppercase text-brand-primary/60 tracking-widest">Telemetry Sink URL</label>
                   <input bind:value={editableSettings.telemetryConfig.cloudUrl} class="w-full bg-bg-surface p-4 rounded-xl border border-brand-primary/20 focus:ring-1 ring-brand-primary outline-none text-text-main font-mono" />
                 </div>
-              {/if}
+              {/if} -->
             </div>
           </section>
         </div>
@@ -265,7 +265,7 @@ async function save() {
             <svg class="w-8 h-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
           </div>
           <h3 class="text-xl font-black text-text-main uppercase tracking-tighter mb-2">{tabs.find(t => t.id === activeTab)?.label}</h3>
-          <p class="text-text-muted text-sm max-w-xs">This module is currently in the KraftAdmin v0.1.0 roadmap.</p>
+          <p class="text-text-muted text-sm max-w-xs">This module is currently development.</p>
         </div>
       {/if}
     {:else}

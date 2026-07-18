@@ -1,272 +1,346 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import FieldRenderer from '../components/inputs/FieldRenderer.svelte';
+	import FieldRenderer from '../components/inputs/FieldRenderer.svelte';
 
-  export let columns: any[] = [];
-  export let onSubmit: (data: any) => void;
-  export let resourceName: string = "";
-  export let submitLabel: string = "Save";
-  export let initialData: any = {};
-  export let externalErrors: Record<string, string[]> = {};
+	import type {
+		ColumnType,
+		KraftAdminColumn,
+		LookupDescriptor,
+		ResourceRow
+	} from '../types/resources';
 
-  let formData: any = {};
-  let lastLoadedId: string | null = null;
-  let fields: any[] = [];
-  let lastColumnsJson = '';
-  
+	export let columns: KraftAdminColumn[] = [];
+	export let onSubmit: (data: Record<string, unknown>) => void;
+	export let resourceName: string = '';
+	export let submitLabel: string = 'Save';
+	export let initialData: ResourceRow | null = null;
+	export let externalErrors: Record<string, string[]> = {};
 
-  // Track which URLs were uploaded during THIS session
-  // so cancel knows what to clean up
-  let sessionUploadedUrls = new Set<string>();
+	let formData: Record<string, unknown> = {};
+	let lastLoadedId: string | null = null;
+	let fields: KraftAdminColumn[] = [];
+	let lastColumnsJson = '';
 
-  // Track original file URLs from initialData so we never
-  // delete files that existed before this edit session started
-  let originalFileUrls = new Set<string>();
+	let sessionUploadedUrls = new Set<string>();
+	let originalFileUrls = new Set<string>();
 
-  $: {
-    const json = JSON.stringify(columns);
-    if (json !== lastColumnsJson) {
-      lastColumnsJson = json;
-      fields = columns.filter(
-        c => c.visible && !['id', 'createdAt', 'updatedAt', 'deletedAt'].includes(c.name)
-      );
-    }
-  }
+	const FILE_TYPES: ColumnType[] = ['IMAGE', 'VIDEO', 'FILE', 'AUDIO', 'DOCUMENT'];
+	const HIDDEN_FIELDS = ['id', 'createdAt', 'updatedAt', 'deletedAt'];
+	const WIDE_FIELDS: ColumnType[] = [
+		'TEXTAREA', 'JSON', 'OBJECT', 'ARRAY', 'WYSIWYG',
+		'RELATION', 'MULTI_RELATION', 'VIDEO', 'IMAGE', 'FILE', 'AUDIO', 'DOCUMENT'
+	];
 
-  $: if (columns?.length > 0) {
-    const currentId = initialData?.id || 'new';
-    if (currentId !== lastLoadedId) {
-      formData = buildFormData(columns, initialData);
-      lastLoadedId = currentId;
+	$: {
+		const json = JSON.stringify(columns);
+		if (json !== lastColumnsJson) {
+			lastColumnsJson = json;
+			fields = columns.filter((column) => column.visible && !HIDDEN_FIELDS.includes(column.name));
+		}
+	}
 
-      // Snapshot original file URLs so cancel doesn't delete pre-existing files
-      originalFileUrls = new Set(collectFileUrls(formData));
-      sessionUploadedUrls = new Set(); // reset on new record load
-    }
-  }
+	$: if (columns.length > 0) {
+		const currentId = initialData?.id ?? 'new';
+		if (currentId !== lastLoadedId) {
+			formData = buildFormData(columns, initialData);
+			lastLoadedId = currentId;
+			originalFileUrls = new Set(collectFileUrls(formData));
+			sessionUploadedUrls = new Set();
+		}
+	}
 
-  $: if (initialData?.id) submitLabel = "Update";
+	$: if (initialData?.id) {
+		submitLabel = 'Update';
+	}
 
-  // ─── File URL collection helpers ─────────────────────────────────────────
+	// Backend wraps every @Embedded value as { data, summary } (EmbeddedResponse).
+	// Unwrap one level so callers work with the flat field map underneath.
+	function unwrapEmbedded(raw: unknown): Record<string, unknown> {
+		if (raw && typeof raw === 'object' && !Array.isArray(raw) && 'data' in (raw as Record<string, unknown>)) {
+			const data = (raw as Record<string, unknown>).data;
+			return data && typeof data === 'object' && !Array.isArray(data)
+				? (data as Record<string, unknown>)
+				: {};
+		}
+		return raw && typeof raw === 'object' && !Array.isArray(raw)
+			? (raw as Record<string, unknown>)
+			: {};
+	}
 
-  function collectFileUrls(data: Record<string, any>): string[] {
-    const urls: string[] = [];
-    columns.forEach(col => {
-      if (['IMAGE', 'VIDEO', 'FILE', 'AUDIO', 'DOCUMENT'].includes(col.type)) {
-        const val = data[col.name];
-         console.log("FIELD", col.name);
-        console.log("VALUE", val);
-        console.log("MULTIPLE", col.fileOptions?.multiple);
-        if (typeof val === 'string' && val) urls.push(val);
-        if (Array.isArray(val)) val.filter(Boolean).forEach(v => urls.push(v));
-      } else if (col.type === 'OBJECT' && col.subColumns) {
-        const obj = data[col.name] ?? {};
-        col.subColumns.forEach((sub: any) => {
-          if (['IMAGE', 'VIDEO', 'FILE', 'AUDIO', 'DOCUMENT'].includes(sub.type)) {
-            const val = obj[sub.name];
-            if (typeof val === 'string' && val) urls.push(val);
-          }
-        });
-      }
-    });
-    return urls.filter(Boolean);
-  }
+	function collectFileUrls(data: Record<string, unknown>): string[] {
+		const urls: string[] = [];
 
-  async function deleteUrl(url: string) {
-    try {
-      await fetch('/admin/api/uploads', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      });
-    } catch (e) {
-      console.error('[DynamicForm] Failed to delete uploaded file:', url, e);
-    }
-  }
+		columns.forEach((column: KraftAdminColumn) => {
+			if (FILE_TYPES.includes(column.type)) {
+				const value = data[column.name];
 
-  // ─── Cancel — delete session-uploaded files that weren't originally there ──
+				if (typeof value === 'string' && value) {
+					urls.push(value);
+				}
+				if (Array.isArray(value)) {
+					value
+						.filter((item): item is string => typeof item === 'string' && Boolean(item))
+						.forEach((url) => urls.push(url));
+				}
+			}
 
-  async function handleCancel() {
-    // Only delete URLs that were uploaded in this session AND
-    // weren't part of the original data (i.e. new uploads only)
-    const toDelete = [...sessionUploadedUrls].filter(url => !originalFileUrls.has(url));
+			if (column.type === 'OBJECT' && column.subColumns) {
+				const objectValue = data[column.name];
+				if (!objectValue || typeof objectValue !== 'object' || Array.isArray(objectValue)) return;
 
-    if (toDelete.length > 0) {
-      await Promise.all(toDelete.map(deleteUrl));
-    }
+				const objectData = objectValue as Record<string, unknown>;
 
-    window.history.back();
-  }
+				column.subColumns.forEach((subColumn) => {
+					// subColumn IS a KraftAdminColumn — type lives directly on it,
+					// not under a nested `.value`.
+					if (!FILE_TYPES.includes(subColumn.type)) return;
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────
+					const value = objectData[subColumn.name];
 
-  function arrayToDatetimeLocal(arr: any[]): string {
-    const [y, m, d, hh = 0, mm = 0] = arr;
-    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-  }
+					if (typeof value === 'string' && value) {
+						urls.push(value);
+					}
+					if (Array.isArray(value)) {
+						value
+							.filter((item): item is string => typeof item === 'string' && Boolean(item))
+							.forEach((url) => urls.push(url));
+					}
+				});
+			}
+		});
 
-  function arrayToDate(arr: any[]): string {
-    const [y, m, d] = arr;
-    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  }
+		return urls;
+	}
 
-  function buildFormData(cols: any[], data: any): Record<string, any> {
-    const values = data?.values || {};
-    // const result: Record<string, any> = { id: data?.id ?? null };
+	async function deleteUrl(url: string): Promise<void> {
+		try {
+			await fetch('/admin/api/uploads', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ url })
+			});
+		} catch (error) {
+			console.error('[DynamicForm] Failed to delete uploaded file:', url, error);
+		}
+	}
 
-    // const rawId = data?.id;
-    // const result: Record<string, any> = { 
-    //     id: (rawId !== undefined && rawId !== 0) ? rawId : null 
-    // };
+	async function handleCancel(): Promise<void> {
+		const toDelete = [...sessionUploadedUrls].filter((url) => !originalFileUrls.has(url));
+		if (toDelete.length > 0) {
+			await Promise.all(toDelete.map(deleteUrl));
+		}
+		window.history.back();
+	}
 
-    const result: Record<string, any> = {};
+	function arrayToDatetimeLocal(arr: unknown[]): string {
+		const [year, month, day, hour = 0, minute = 0] = arr as number[];
+		return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+	}
 
-const rawId = data?.id;
+	function arrayToDate(arr: unknown[]): string {
+		const [year, month, day] = arr as number[];
+		return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+	}
 
-if (
-    rawId !== undefined &&
-    rawId !== null &&
-    rawId !== "" &&
-    rawId !== 0
-) {
-    result.id = rawId;
+	function buildFormData(
+		cols: KraftAdminColumn[],
+		data: ResourceRow | null
+	): Record<string, unknown> {
+		const values = data?.values ?? {};
+		const result: Record<string, unknown> = {};
+		const rawId = data?.id;
+
+		if (rawId !== undefined && rawId !== null && rawId !== '') {
+			result.id = rawId;
+		}
+
+		cols.forEach((column) => {
+			try {
+				const raw = values[column.name] ?? null;
+
+				switch (column.type) {
+				
+					case 'OBJECT': {
+	result[column.name] = mapObjectValue(
+		raw,
+		column
+	);
+	break;
 }
 
-    cols.forEach(col => {
-      try {
-        const raw = values[col.name] ?? null;
-        switch (col.type) {
-          case 'OBJECT': {
-            const src = raw?.data ?? raw ?? {};
-            result[col.name] = {};
-            col.subColumns?.forEach((sub: any) => {
-              const subRaw = src[sub.name] ?? null;
-              if (Array.isArray(subRaw) && sub.type === 'DATETIME') {
-                result[col.name][sub.name] = arrayToDatetimeLocal(subRaw);
-              } else if (Array.isArray(subRaw) && sub.type === 'DATE') {
-                result[col.name][sub.name] = arrayToDate(subRaw);
-              } else {
-                result[col.name][sub.name] = subRaw ?? sub.defaultValue ?? '';
-              }
-            });
-            break;
-          }
-          case 'DATETIME':
-            result[col.name] = Array.isArray(raw) ? arrayToDatetimeLocal(raw) : (raw ?? '');
-            break;
-          case 'DATE':
-            result[col.name] = Array.isArray(raw) ? arrayToDate(raw) : (raw ?? '');
-            break;
-          case 'TIME':
-            result[col.name] = typeof raw === 'string'
-              ? (raw.includes('T') ? raw.split('T')[1].substring(0, 5) : raw.substring(0, 5))
-              : '';
-            break;
-          case 'RELATION':
-            result[col.name] = raw && typeof raw === 'object' && !Array.isArray(raw)
-              ? (raw.id ?? null)
-              : (raw ?? null);
-            break;
-          case 'MULTI_RELATION':
-            result[col.name] = Array.isArray(raw)
-              ? raw.map((i: any) => typeof i === 'object' ? (i.id ?? i) : i)
-              : [];
-            break;
-          case 'NUMBER':
-          case 'RANGE':
-            result[col.name] = typeof raw === 'number' ? raw : (raw ?? 0);
-            break;
-          case 'CHECKBOX':
-            result[col.name] = typeof raw === 'boolean' ? raw : false;
-            break;              
-          case 'ARRAY':
-          case 'MULTI_SELECT':
-            result[col.name] = Array.isArray(raw)
-              ? raw
-              : (typeof raw === 'string' && raw
-                  ? raw.split(',').map((s: string) => s.trim()).filter(Boolean)
-                  : []);
-            break;
-          case "COLLECTION": {
-    if (raw == null) {
-        result[col.name] = [];
-    } else if (Array.isArray(raw)) {
-        result[col.name] = raw;
-    } else if (typeof raw === "object") {
-        // Map
-        result[col.name] = Object.entries(raw).map(([key, value]) => ({
-            key,
-            value
-        }));
-    } else {
-        result[col.name] = [raw];
-    }
-    break;
-}  
-          default:
-            result[col.name] = raw !== null && typeof raw === 'object'
-              ? (Array.isArray(raw) ? raw.join(', ') : (raw.displayField ?? raw.id ?? JSON.stringify(raw)))
-              : (raw ?? col.defaultValue ?? '');
-        }
-      } catch (e) {
-        console.error(`[DynamicForm] Failed to map field "${col.name}" (${col.type}):`, e);
-        result[col.name] = null;
-      }
-    });
+					case 'DATETIME':
+						result[column.name] = Array.isArray(raw) ? arrayToDatetimeLocal(raw) : raw ?? '';
+						break;
 
-    return result;
-  }
+					case 'DATE':
+						result[column.name] = Array.isArray(raw) ? arrayToDate(raw) : raw ?? '';
+						break;
 
-  // ─── Event handlers ──────────────────────────────────────────────────────
+					case 'TIME':
+						result[column.name] =
+							typeof raw === 'string'
+								? raw.includes('T')
+									? raw.split('T')[1].substring(0, 5)
+									: raw.substring(0, 5)
+								: '';
+						break;
 
-  function handleFieldChange(colName: string, value: any) {
-    formData = { ...formData, [colName]: value };
-  }
+					case 'RELATION':
+						result[column.name] =
+							raw && typeof raw === 'object' && !Array.isArray(raw)
+								? (raw as { id?: unknown }).id ?? null
+								: raw ?? null;
+						break;
 
-  function handleFileClear(colName: string, index: number | null) {
-    const current = formData[colName];
-    //  When a file is removed from the form, also remove from session tracking
-    // so cancel doesn't try to delete something already gone
-    if (typeof current === 'string') {
-      sessionUploadedUrls.delete(current);
-    } else if (Array.isArray(current) && index !== null) {
-      sessionUploadedUrls.delete(current[index]);
-    }
+					case 'MULTI_RELATION':
+						result[column.name] = Array.isArray(raw)
+							? raw.map((item) =>
+									item && typeof item === 'object' ? (item as { id?: unknown }).id ?? item : item
+								)
+							: [];
+						break;
 
-    if (Array.isArray(current)) {
-      formData = { ...formData, [colName]: current.filter((_: any, i: number) => i !== index) };
-    } else {
-      formData = { ...formData, [colName]: null };
-    }
-  }
+					case 'NUMBER':
+					case 'RANGE':
+						result[column.name] = typeof raw === 'number' ? raw : raw ?? 0;
+						break;
 
-  //  Called by FieldRenderer when FileUploader completes an upload
-  function handleFileUploaded(colName: string, url: string) {
-    sessionUploadedUrls = new Set([...sessionUploadedUrls, url]);
-  }
+					case 'CHECKBOX':
+						result[column.name] = typeof raw === 'boolean' ? raw : false;
+						break;
 
-  function handleSubmit() {
-    // On successful submit, clear session tracking — files are now saved
-    sessionUploadedUrls = new Set();
-    onSubmit(formData);
-  }
+					case 'ARRAY':
+					case 'MULTI_SELECT':
+						result[column.name] = Array.isArray(raw)
+							? raw
+							: typeof raw === 'string' && raw
+								? raw.split(',').map((item) => item.trim()).filter(Boolean)
+								: [];
+						break;
 
+					case 'COLLECTION':
+						if (raw == null) {
+							result[column.name] = [];
+						} else if (Array.isArray(raw)) {
+							result[column.name] = raw;
+						} else if (typeof raw === 'object') {
+							result[column.name] = Object.entries(raw as Record<string, unknown>).map(
+								([key, value]) => ({ key, value })
+							);
+						} else {
+							result[column.name] = [raw];
+						}
+						break;
 
-// Helper to find the lookup descriptor for a specific field
-  $: getLookup = (fieldName:any) => initialData?.relatedResources?.[fieldName]?.lookupDescriptor;
+					default:
+						if (raw !== null && typeof raw === 'object') {
+							if (Array.isArray(raw)) {
+								result[column.name] = raw.join(', ');
+							} else {
+								const objectValue = raw as Record<string, unknown>;
+								result[column.name] = objectValue.displayField ?? objectValue.id ?? JSON.stringify(raw);
+							}
+						} else {
+							result[column.name] = raw ?? column.defaultValue ?? '';
+						}
+				}
+			} catch (error) {
+				console.error(`[DynamicForm] Failed to map field "${column.name}" (${column.type}):`, error);
+				result[column.name] = null;
+			}
+		});
 
+		return result;
+	}
 
+	function handleFieldChange(columnName: string, value: unknown): void {
+		formData = { ...formData, [columnName]: value };
+	}
+
+	function handleFileClear(columnName: string, index: number | null): void {
+		const current = formData[columnName];
+
+		if (typeof current === 'string') {
+			sessionUploadedUrls.delete(current);
+		} else if (Array.isArray(current) && index !== null) {
+			const url = current[index];
+			if (typeof url === 'string') {
+				sessionUploadedUrls.delete(url);
+			}
+		}
+
+		if (Array.isArray(current)) {
+			formData = { ...formData, [columnName]: current.filter((_, i) => i !== index) };
+		} else {
+			formData = { ...formData, [columnName]: null };
+		}
+	}
+
+	function handleFileUploaded(columnName: string, url: string): void {
+		sessionUploadedUrls = new Set([...sessionUploadedUrls, url]);
+	}
+
+	function handleSubmit(): void {
+		sessionUploadedUrls = new Set();
+		onSubmit(formData);
+	}
+
+	function getLookup(fieldName: string): LookupDescriptor | undefined {
+		return initialData?.relatedResources?.[fieldName]?.lookupDescriptor ?? undefined;
+	}
+
+	function mapObjectValue(
+	raw: unknown,
+	column: KraftAdminColumn
+): Record<string, unknown> {
+	const source = unwrapEmbedded(raw);
+	const result: Record<string, unknown> = {};
+
+	for (const subColumn of column.subColumns ?? []) {
+		const subRaw = source[subColumn.name];
+
+		if (subColumn.type === 'OBJECT') {
+			result[subColumn.name] = mapObjectValue(
+				subRaw,
+				subColumn
+			);
+			continue;
+		}
+
+		if (
+			Array.isArray(subRaw) &&
+			subColumn.type === 'DATETIME'
+		) {
+			result[subColumn.name] =
+				arrayToDatetimeLocal(subRaw);
+			continue;
+		}
+
+		if (
+			Array.isArray(subRaw) &&
+			subColumn.type === 'DATE'
+		) {
+			result[subColumn.name] =
+				arrayToDate(subRaw);
+			continue;
+		}
+
+		if (subRaw !== null && subRaw !== undefined) {
+			result[subColumn.name] = subRaw;
+		} else {
+			result[subColumn.name] =
+				subColumn.defaultValue ?? '';
+		}
+	}
+
+	return result;
+}
 </script>
 
 <div class="form-container !p-0">
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-8">
     {#each fields as col (col.name)}
       {@const colErrors = externalErrors[col.name]}
-      {@const isWide = [
-        'TEXTAREA','JSON','OBJECT','ARRAY','WYSIWYG',
-        'RELATION','MULTI_RELATION','VIDEO','IMAGE',
-        'FILE','AUDIO','DOCUMENT'
-      ].includes(col.type)}
+      {@const isWide = WIDE_FIELDS.includes(col.type)}
 
       <div class="flex flex-col gap-1.5 {isWide ? 'md:col-span-2' : ''}">
         <label class="field-label">
@@ -301,11 +375,7 @@ if (
   </div>
 
   <div class="form-footer px-8">
-    <button type="button" on:click={handleCancel} class="btn-secondary">
-      Cancel
-    </button>
-    <button type="button" on:click={handleSubmit} class="btn-primary">
-      {submitLabel} {resourceName}
-    </button>
+    <button type="button" on:click={handleCancel} class="btn-secondary">Cancel</button>
+    <button type="button" on:click={handleSubmit} class="btn-primary">{submitLabel} {resourceName}</button>
   </div>
 </div>

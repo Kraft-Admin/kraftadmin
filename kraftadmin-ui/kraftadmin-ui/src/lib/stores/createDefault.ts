@@ -1,7 +1,7 @@
 import {
     ValueType,
     type ValueDescriptor
-} from "../../lib/types/descriptors";
+} from "../../lib/types/resources";
 
 export function createDefaultValue(descriptor: ValueDescriptor): any {
 

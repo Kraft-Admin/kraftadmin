@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import TextInput from '../inputs/TextInput.svelte';
   import SelectInput from '../inputs/SelectInput.svelte';
   import CheckboxInput from '../inputs/CheckboxInput.svelte';
@@ -9,33 +9,51 @@
   import FileUploader from './FileUploader.svelte';
 
   export let subColumns: any[] = [];
-  export let value: Record<string, any> = {};
+  export let value: any = {};
   export let label: string = '';
 
   const dispatch = createEventDispatcher();
 
-  // ✅ Local copy — we never mutate `value` prop directly
+  onMount(() => {
+    console.log("subColumns " + subColumns);
+    console.log("value " + value);
+    console.log("label " +  label);
+  })
+
+  // Helper: extracts the flat object if the backend provides {data, summary}
+  function unwrap(val: any) {
+    if (val && typeof val === 'object') {
+      return 'data' in val ? (val.data ?? {}) : val;
+    }
+    return {};
+  }
+
+  // Helper: re-wraps the flat object back into {data, summary} for the API
+  function wrap(newData: any, originalWrapper: any) {
+    if (originalWrapper && typeof originalWrapper === 'object' && 'data' in originalWrapper) {
+      return { ...originalWrapper, data: newData };
+    }
+    return newData;
+  }
+
   let local: Record<string, any> = {};
 
-  // Sync from parent → local when value reference changes
-  // (e.g. when DynamicForm initializes formData from scratch)
+  // Sync from parent → local (Unwrap logic)
   $: {
-    const incoming = value ?? {};
-    // Only sync if the content actually changed — avoids wiping
-    // local edits when parent re-renders for unrelated reasons
+    const incoming = unwrap(value);
     if (JSON.stringify(incoming) !== JSON.stringify(local)) {
       local = { ...incoming };
     }
   }
 
-  // ✅ Single update path — every input calls this, which dispatches
-  // the full updated object up to DynamicForm via the 'change' event
+  // Single update path (Wrap logic)
   function update(fieldName: string, newVal: any) {
-    local = { ...local, [fieldName]: newVal };
-    dispatch('change', local); // DynamicForm receives the whole sub-object
+    const nextLocal = { ...local, [fieldName]: newVal };
+    const payload = wrap(nextLocal, value);
+    dispatch('change', payload);
   }
 
-  // Stable fields — filter out system-managed subcolumns
+  // Stable fields
   $: fields = subColumns.filter(
     c => c.visible !== false && !['id', 'createdAt', 'updatedAt'].includes(c.name)
   );
@@ -150,8 +168,22 @@
             on:clear={() => update(sub.name, null)}
           />
 
+       {:else if sub.type === 'OBJECT'}
+          {#if sub.subColumns && Array.isArray(sub.subColumns)}
+            <svelte:self
+              subColumns={sub.subColumns}
+              value={local[sub.name] ?? { data: {} }}
+              label={sub.label ?? sub.name}
+              on:change={(e) => update(sub.name, e.detail)}
+            />
+          {:else}
+            <!-- Fallback if definition is missing, prevents the crash -->
+            <div class="text-xs text-red-500">
+              Error: Missing sub-column definition for "{sub.name}"
+            </div>
+          {/if}
+
         {:else}
-          <!-- Fallback: plain text -->
           <TextInput
             value={local[sub.name] ?? ''}
             placeholder={sub.placeholder ?? ''}
@@ -162,72 +194,17 @@
     {/each}
   </div>
 </div>
-
+<!-- Keep your <style> block exactly as it was -->
 <style>
-  .embedded-root {
-    width: 100%;
-  }
-
-  .embedded-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-
-  .embedded-label {
-    font-size: 0.7rem;
-    font-weight: 800;
-    color: var(--brand-primary, #3b82f6);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-  }
-
-  .embedded-rule {
-    flex: 1;
-    height: 1px;
-    background: var(--border-subtle, #27272a);
-  }
-
-  .embedded-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 1.25rem;
-    background: var(--bg-main, #0c0c0e);
-    border: 1px dashed var(--border-subtle, #27272a);
-    border-radius: 0.5rem;
-  }
-
-  @media (min-width: 768px) {
-    .embedded-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .span-2 {
-      grid-column: span 2;
-    }
-  }
-
-  .embedded-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-
-  .field-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--text-muted, #52525b);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
+  /* Keep your existing styles as they were */
+  .embedded-root { width: 100%; }
+  .embedded-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+  .embedded-label { font-size: 0.7rem; font-weight: 800; color: var(--brand-primary, #3b82f6); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+  .embedded-rule { flex: 1; height: 1px; background: var(--border-subtle, #27272a); }
+  .embedded-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1.25rem; background: var(--bg-main, #0c0c0e); border: 1px dashed var(--border-subtle, #27272a); border-radius: 0.5rem; }
+  @media (min-width: 768px) { .embedded-grid { grid-template-columns: repeat(2, 1fr); } .span-2 { grid-column: span 2; } }
+  .embedded-field { display: flex; flex-direction: column; gap: 0.375rem; }
+  .field-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted, #52525b); text-transform: uppercase; letter-spacing: 0.05em; }
   .req-star { color: #ef4444; }
-
-  .range-input {
-    width: 100%;
-    accent-color: var(--brand-primary, #3b82f6);
-    cursor: pointer;
-  }
+  .range-input { width: 100%; accent-color: var(--brand-primary, #3b82f6); cursor: pointer; }
 </style>

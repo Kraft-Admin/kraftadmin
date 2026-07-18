@@ -1,5 +1,5 @@
 <script lang="ts">
-    export let value: any;
+    export let value: unknown;
     export let mode: "table" | "detail" = "detail";
 </script>
 

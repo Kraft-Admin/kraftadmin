@@ -1,99 +1,200 @@
 <script lang="ts">
-  import { link } from 'svelte-spa-router';
-  import Cell from '../../lib/components/Cell.svelte';
-  import Render from '../renderers/Render.svelte';
-  import { Loader } from '@lucide/svelte';
+  import { link } from "svelte-spa-router";
+  import Render from "../renderers/Render.svelte";
+  import { Loader } from "@lucide/svelte";
+  import { onMount } from "svelte";
+  import { flash } from "../stores/flash";
+  import { snackbar } from "../stores/snackbar";
+  import { confirmDialog } from "../stores/dialog";
+  import type {
+    KraftAdminResource,
+    KraftAdminColumn,
+    ResourceRow,
+    KraftOperationResponse
+  } from "../types/resources";
 
   export let params: { name?: string } = {};
 
-  let resource: any = null;
-  let items: any[] = [];
-  let columns: any[] = [];
+  let resource: KraftAdminResource | null = null;
+  let items: ResourceRow[] = [];
+  let columns: KraftAdminColumn[] = [];
   let currentPage = 1;
   let searchQuery = "";
   let sortField: string | null = null;
-  let sortDirection: 'ASC' | 'DESC' | null = null;
+  let sortDirection: "ASC" | "DESC" | null = null;
   let debounceTimer: number;
-  let pagination = { total: 0, pageSize: 20, totalPages: 0 };
+  let pagination = {
+    total: 0,
+    pageSize: 20,
+    totalPages: 0
+  };
   let loading = true;
 
-  // 1. Trigger ONLY when the resource name changes
+  // Show flash message from Create/Edit page
+
+  onMount(() => {
+    const msg = flash.consume();
+    if (msg) {
+      snackbar[msg.type](msg.message);
+    }
+  });
+
+
   $: if (params.name) {
-      currentPage = 1; 
-      searchQuery = "";
-      sortField = null;
-      sortDirection = null;
-      loadData(params.name, 1, "");
+    currentPage = 1;
+    searchQuery = "";
+    sortField = null;
+    sortDirection = null;
+    loadData(params.name, 1, "");
   }
 
-  $: placeholder = resource?.searchableFields?.length > 0 
-    ? `Search by ${resource.searchableFields.join(', ')}...` 
-    : "Search records...";
+  $: placeholder =
+    resource?.searchableFields?.length ?? 0 > 0
+      ? `Search by ${resource!.searchableFields.join(", ")}...`
+      : "Search records...";
 
-  // 2. Handle pagination changes
   async function handlePageChange(newPage: number) {
-    if (newPage >= 1 && newPage <= pagination.totalPages && newPage !== currentPage) {
+    if (
+      newPage >= 1 &&
+      newPage <= pagination.totalPages &&
+      newPage !== currentPage
+    ) {
       currentPage = newPage;
-      await loadData(params.name!, newPage, searchQuery, sortField ?? undefined, sortDirection ?? undefined);
+
+      await loadData(
+        params.name!,
+        newPage,
+        searchQuery,
+        sortField ?? undefined,
+        sortDirection ?? undefined
+      );
     }
   }
 
-  // 3. Handle search input with debouncing
-  function handleSearch(event: any) {
+  function handleSearch(event: Event) {
     clearTimeout(debounceTimer);
-    searchQuery = event.target.value;
-    debounceTimer = setTimeout(() => {
+
+    const target = event.target as HTMLInputElement;
+    searchQuery = target.value;
+
+    debounceTimer = window.setTimeout(() => {
       currentPage = 1;
-      loadData(params.name!, currentPage, searchQuery, sortField ?? undefined, sortDirection ?? undefined);
+
+      loadData(
+        params.name!,
+        currentPage,
+        searchQuery,
+        sortField ?? undefined,
+        sortDirection ?? undefined
+      );
     }, 500);
   }
 
-  // 4. Handle column sorting
   function handleSort(columnName: string) {
     if (!resource?.sortableFields?.includes(columnName)) return;
 
     if (sortField === columnName) {
-      sortDirection = sortDirection === 'ASC' ? 'DESC' : 'ASC';
+      sortDirection = sortDirection === "ASC" ? "DESC" : "ASC";
     } else {
       sortField = columnName;
-      sortDirection = 'DESC';
+      sortDirection = "DESC";
     }
-    loadData(params.name!, currentPage, searchQuery, sortField, sortDirection ?? undefined);
+
+    loadData(
+      params.name!,
+      currentPage,
+      searchQuery,
+      sortField,
+      sortDirection ?? undefined
+    );
   }
 
-  async function loadData(resourceName: string, page: number, query: string, sField?: string, sDir?: string) {
+  // The list endpoint returns { resource: KraftAdminResource }, unwrapped —
+  // not a KraftOperationResponse<T> envelope like save/delete/detail. Model
+  // that explicitly rather than relying on `any`.
+  interface ListResourceResponse {
+    resource: KraftAdminResource;
+  }
+
+  async function loadData(
+    resourceName: string,
+    page: number,
+    query: string,
+    sField?: string,
+    sDir?: string
+  ) {
     loading = true;
+
     try {
       let url = `/admin/api/resources/${resourceName}?page=${page}&size=${pagination.pageSize}`;
-      if (query) url += `&q=${encodeURIComponent(query)}`;
-      if (sField) url += `&sortField=${sField}&sortDirection=${sDir || 'DESC'}`;
-      
-      const response = await fetch(url);
-      const result = await response.json();
 
-      resource = result.resource;
-      columns = resource.columns.filter((c: any) => c.visible);
+      if (query) url += `&q=${encodeURIComponent(query)}`;
+
+      if (sField) url += `&sortField=${sField}&sortDirection=${sDir || "DESC"}`;
+
+      const response = await fetch(url);
+
+      // The error-path body still comes back as { success:false, message }
+      // (KraftOperationResponse shape) even though the success path is a
+      // bare { resource }. Read as unknown first, then narrow.
+      const result: ListResourceResponse | KraftOperationResponse<unknown> =
+        await response.json();
+
+      if (!response.ok || (result as KraftOperationResponse<unknown>).success === false) {
+        const message = (result as KraftOperationResponse<unknown>).message;
+        snackbar.error(message || "Unable to load resource data.");
+        return;
+      }
+
+      const success = result as ListResourceResponse;
+      resource = success.resource;
+      columns = resource.columns.filter((c) => c.showInTable);
       items = resource.data.items;
-      
+
       pagination = {
         total: resource.data.total,
         pageSize: resource.data.pageSize,
         totalPages: resource.data.totalPages
       };
-    } catch (e) {
-      console.error("Error loading resource data:", e);
+    } catch (e: any) {
+      console.error(e);
+      snackbar.error(e.message || "Unable to connect to the server.");
     } finally {
       loading = false;
     }
   }
 
-  async function handleDelete(id: any) {
-    if (!confirm(`Are you sure you want to delete?`)) return;
-    const res = await fetch(`/admin/api/resources/${params.name}/${id}`, { method: 'DELETE' });
-    if (res.ok) loadData(params.name!, currentPage, searchQuery, sortField ?? undefined, sortDirection ?? undefined);
+  async function handleDelete(id: string) {
+    const confirmed = await confirmDialog.open({
+      title: "Delete Record",
+      message: "Are you sure you want to delete this record?",
+      variant: "danger"
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/admin/api/resources/${params.name}/${id}`, { method: "DELETE" });
+      const result: KraftOperationResponse<unknown> = await res.json();
+
+      if (res.ok && result.success) {
+        snackbar.success(result.message || "Record deleted successfully.");
+
+        await loadData(
+          params.name!,
+          currentPage,
+          searchQuery,
+          sortField ?? undefined,
+          sortDirection ?? undefined
+        );
+      } else {
+        snackbar.error(result.message || "Delete failed.");
+      }
+    } catch (e: any) {
+      snackbar.error(e.message || "Delete failed.");
+    }
   }
 </script>
-
 
 <svelte:head>
   <title>{resource?.label ? `${resource.label} | ${resource?.name}` : 'Loading...'}</title>
@@ -105,16 +206,16 @@
       <h2 class="text-2xl font-bold text-text-main capitalize tracking-tight">{resource?.label || params.name}</h2>
       <p class="text-xs text-text-muted mt-1 font-medium">Manage and monitor your {params.name} resource data</p>
     </div>
-    
+
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-      <input 
-        type="text" 
-        placeholder={placeholder} 
+      <input
+        type="text"
+        placeholder={placeholder}
         value={searchQuery}
         on:input={handleSearch}
         class="px-4 py-2.5 bg-bg-surface border border-border-subtle rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-text-main"
       />
-      <a href="/resources/{params.name}/create" use:link 
+      <a href="/resources/{params.name}/create" use:link
          class="px-5 py-2.5 bg-brand-primary text-white text-xs font-bold rounded-xl shadow-lg shadow-brand-primary/20 hover:opacity-90 transition-all text-center">
         + New
       </a>
@@ -122,12 +223,12 @@
   </div>
 
   <div class="bg-bg-surface border border-border-subtle rounded-2xl shadow-sm overflow-hidden flex flex-col">
-     {#if loading}
-    <div class="flex flex-col items-center justify-center py-20 gap-4">
-      <Loader class="w-8 h-8 text-brand-primary animate-spin" />
-      <p class="text-[10px] text-text-muted font-black uppercase tracking-[0.2em]">Synchronizing...</p>
-    </div>
-      {:else if items.length === 0}
+    {#if loading}
+      <div class="flex flex-col items-center justify-center py-20 gap-4">
+        <Loader class="w-8 h-8 text-brand-primary animate-spin" />
+        <p class="text-[10px] text-text-muted font-black uppercase tracking-[0.2em]">Synchronizing...</p>
+      </div>
+    {:else if items.length === 0}
       <div class="p-24 text-center text-text-muted font-medium">No records found.</div>
     {:else}
       <div class="overflow-x-auto w-full">
@@ -135,7 +236,7 @@
           <thead class="bg-bg-main/50 border-b border-border-subtle">
             <tr>
               {#each columns as col}
-                <th 
+                <th
                   class="px-6 py-4 text-[10px] font-extrabold text-text-muted uppercase tracking-widest cursor-pointer hover:text-brand-primary transition-colors select-none"
                   on:click={() => handleSort(col.name)}
                 >
@@ -159,7 +260,13 @@
               <tr class="hover:bg-bg-main/40 transition-colors group">
                 {#each columns as col}
                   <td class="px-6 py-4 whitespace-nowrap text-text-main">
-                    <Render type={col.type} value={row.values[col.name]} label={col.label} mode="table" />
+                    <Render
+                      type={col.type}
+                      value={row.values[col.name]}
+                      elementCollection={col.elementCollection}
+                      label={col.label}
+                      mode="table"
+                    />
                   </td>
                 {/each}
                 <td class="px-6 py-4 text-right">
@@ -182,19 +289,19 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <button 
-            on:click={() => handlePageChange(currentPage - 1)} 
+          <button
+            on:click={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             class="p-2 rounded-lg border border-border-subtle bg-bg-surface text-text-main disabled:opacity-30 hover:border-brand-primary transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
           </button>
-          
+
           <span class="text-xs font-bold text-text-main px-2">
             {currentPage} <span class="text-text-muted">/</span> {pagination.totalPages}
           </span>
 
-          <button 
-            on:click={() => handlePageChange(currentPage + 1)} 
+          <button
+            on:click={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === pagination.totalPages}
             class="p-2 rounded-lg border border-border-subtle bg-bg-surface text-text-main disabled:opacity-30 hover:border-brand-primary transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>

@@ -3,12 +3,8 @@ import ResourceList from './lib/pages/ResourceList.svelte'
 import ResourceDetail from './lib/pages/ResourceDetail.svelte'
 import ResourceCreate from './lib/pages/ResourceCreate.svelte'
 import NotFound from './lib/pages/NotFound.svelte'
-import Login from './lib/components/Login.svelte'
 import LogsView from './lib/pages/LogsView.svelte'
 import Settings from './lib/pages/Settings.svelte'
-import Analytics from './lib/pages/Analytics.svelte'
-import Telemetry from './lib/pages/Telemetry.svelte'
-import SystemVitals from './lib/pages/SystemVitals.svelte'
 import LoginPage from './lib/pages/LoginPage.svelte'
 import {wrap} from 'svelte-spa-router/wrap'
 import { authGuard } from './lib/stores/authGuard'
@@ -29,12 +25,6 @@ export const routes = {
     "/logs": admin(LogsView),
 
     "/settings": admin(Settings),
-
-    "/analytics": admin(Analytics),
-
-    "/telemetry": admin(Telemetry),
-
-    "/system": admin(SystemVitals),
 
     "*": NotFound
 };

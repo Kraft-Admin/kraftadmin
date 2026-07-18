@@ -18,7 +18,7 @@
 
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
-    import type { ValueDescriptor } from "../../types/descriptors";
+    import type { ValueDescriptor } from "../../types/resources";
 
     export let descriptor: ValueDescriptor;
     export let value: any;

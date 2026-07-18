@@ -1,7 +1,7 @@
 <script lang="ts">
     import SmartInput from "./SmartInput.svelte";
     import { createEventDispatcher } from "svelte";
-    import type { ValueDescriptor } from "../../types/descriptors";
+    import type { ValueDescriptor } from "../../types/resources";
     import { createDefaultValue } from "../../stores/createDefault";
 
     export let descriptor: ValueDescriptor;

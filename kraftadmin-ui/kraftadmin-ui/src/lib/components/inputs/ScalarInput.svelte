@@ -74,7 +74,7 @@ $: dispatch("change", value);
     import {
         ValueType,
         type ValueDescriptor
-    } from "../../types/descriptors";
+    } from "../../types/resources";
     import { createEventDispatcher } from "svelte";
 
     export let descriptor: ValueDescriptor;

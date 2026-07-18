@@ -35,7 +35,6 @@
     onMount(() => {
         const handler = (e: KeyboardEvent) => {
             if (!fullscreen) return;
-
             if (e.key === "Escape") close();
             if (e.key === "ArrowRight") next();
             if (e.key === "ArrowLeft") prev();
@@ -47,107 +46,96 @@
 </script>
 
 {#if images.length > 0}
-
     {#if mode === "table"}
-
-        <div class="flex flex-wrap gap-1">
+        <div class="flex flex-wrap gap-2">
             {#each images.slice(0, 4) as image, i}
                 <button
                     type="button"
                     on:click={() => open(i)}
-                    class="focus:outline-none"
+                    class="focus:outline-none transition-transform hover:scale-105"
                 >
                     <img
                         src={image}
                         alt=""
-                        class="w-10 h-10 rounded-lg border border-border-subtle object-cover hover:scale-105 transition-transform"
+                        class="w-10 h-10 rounded-lg border border-border-subtle object-cover"
                     />
                 </button>
             {/each}
 
             {#if images.length > 4}
                 <button
-                    class="w-10 h-10 rounded-lg border border-border-subtle bg-bg-surface text-xs font-semibold"
+                    type="button"
+                    class="w-10 h-10 rounded-lg border border-border-subtle bg-bg-surface text-text-muted text-xs font-semibold hover:bg-bg-main transition"
                     on:click={() => open(4)}
                 >
                     +{images.length - 4}
                 </button>
             {/if}
         </div>
-
     {:else}
-
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             {#each images as image, i}
                 <button
                     type="button"
                     on:click={() => open(i)}
-                    class="group"
+                    class="group relative overflow-hidden rounded-xl border border-border-subtle"
                 >
                     <img
                         src={image}
                         alt=""
-                        class="rounded-xl border border-border-subtle w-full aspect-square object-cover group-hover:opacity-90 transition"
+                        class="w-full aspect-square object-cover transition duration-300 group-hover:scale-105"
                     />
                 </button>
             {/each}
         </div>
-
     {/if}
 
     {#if fullscreen}
-
+        <!-- Backdrop -->
         <div
-            class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center"
+            class="fixed inset-0 z-[9999] bg-overlay backdrop-blur-md flex items-center justify-center p-4"
             on:click={close}
+            role="presentation"
         >
-
-            <!-- Close -->
+            <!-- Close Button -->
             <button
-                class="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                class="absolute top-6 right-6 w-10 h-10 rounded-full bg-[var(--brand-primary)] hover:opacity-90 text-[var(--bg-surface)] flex items-center justify-center transition-all shadow-lg"
                 on:click|stopPropagation={close}
+                aria-label="Close"
             >
                 ✕
             </button>
 
             <!-- Counter -->
-            <div class="absolute top-6 left-1/2 -translate-x-1/2 text-white text-sm font-medium">
+            <div class="absolute top-6 left-1/2 -translate-x-1/2 text-[var(--text-main)] bg-[var(--bg-surface)] px-3 py-1 rounded-full shadow-sm text-sm font-medium">
                 {currentIndex + 1} / {images.length}
             </div>
 
             {#if images.length > 1}
-
-                <!-- Previous -->
                 <button
-                    class="absolute left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl"
+                    class="absolute left-6 w-12 h-12 rounded-full bg-[var(--brand-primary)] hover:opacity-90 text-[var(--bg-surface)] text-2xl flex items-center justify-center transition-all shadow-lg"
                     on:click|stopPropagation={prev}
+                    aria-label="Previous"
                 >
                     ‹
                 </button>
-
-                <!-- Next -->
                 <button
-                    class="absolute right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl"
+                    class="absolute right-6 w-12 h-12 rounded-full bg-[var(--brand-primary)] hover:opacity-90 text-[var(--bg-surface)] text-2xl flex items-center justify-center transition-all shadow-lg"
                     on:click|stopPropagation={next}
+                    aria-label="Next"
                 >
                     ›
                 </button>
-
             {/if}
 
             <img
                 src={images[currentIndex]}
-                alt=""
+                alt="Full screen preview"
                 class="max-w-[92vw] max-h-[92vh] object-contain rounded-xl"
                 on:click|stopPropagation
             />
-
         </div>
-
     {/if}
-
 {:else}
-
     <span class="text-text-muted italic">—</span>
-
 {/if}
