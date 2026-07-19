@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # ✅ needed — full history so we can diff against the previous tag
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -40,13 +40,7 @@ jobs:
           echo "Injected version: $(grep '^version=' gradle.properties)"
 
       - name: Run tests
-        run: ./gradlew :kraft-pulse:test :kraft-admin:test
-
-      - name: Stage kraft-pulse artifacts
-        run: ./gradlew :kraft-pulse:publishMavenJavaPublicationToStagingDirRepository
-        env:
-          GPG_KEY: ${{ secrets.GPG_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: ./gradlew :kraft-admin:test
 
       - name: Stage kraft-admin artifacts
         run: ./gradlew :kraft-admin:publishMavenJavaPublicationToStagingDirRepository
@@ -56,7 +50,7 @@ jobs:
 
       - name: Verify signatures
         run: |
-          for module in kraft-pulse kraft-admin; do
+          for module in kraft-admin; do
             ASC_COUNT=$(find $module/build/staging-deploy -name "*.asc" | wc -l)
             echo "$module signature files found: $ASC_COUNT"
             find $module/build/staging-deploy -type f | sort
@@ -67,15 +61,6 @@ jobs:
         run: |
           cd kraft-pulse/build/staging-deploy && zip -r ../bundle.zip . && cd -
           cd kraft-admin/build/staging-deploy && zip -r ../bundle.zip . && cd -
-
-      - name: Upload kraft-pulse to Maven Central
-        run: |
-          RESPONSE=$(curl --fail-with-body \
-            --request POST \
-            --header "Authorization: Bearer $(echo -n '${{ secrets.SONATYPE_USERNAME }}:${{ secrets.SONATYPE_PASSWORD }}' | base64 -w 0)" \
-            --form "bundle=@kraft-pulse/build/bundle.zip;type=application/octet-stream" \
-            "https://central.sonatype.com/api/v1/publisher/upload?publishingType=AUTOMATIC")
-          echo "kraft-pulse Deployment ID: $RESPONSE"
 
       - name: Upload kraft-admin to Maven Central
         run: |
@@ -105,11 +90,6 @@ jobs:
             echo "## What's Changed"
             echo ""
 
-            echo "### kraft-pulse"
-            git log "$RANGE" --pretty=format:"- %s (%h)" -- kraft-pulse/ || echo "- No changes"
-            echo ""
-            echo ""
-
             echo "### kraft-admin"
             git log "$RANGE" --pretty=format:"- %s (%h)" -- kraft-admin/ || echo "- No changes"
             echo ""
@@ -133,7 +113,6 @@ jobs:
           draft: true
           prerelease: ${{ github.event.inputs.is_prerelease }}
           files: |
-            kraft-pulse/build/libs/kraft-pulse-*.jar
             kraft-admin/build/libs/kraft-admin-*.jar
 
       # Step 2: Publish the draft — makes it visible, assets already attached
