@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.client.RestTemplate
-import telemetry.KraftPulse
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -21,20 +20,20 @@ class AppController(
         throw RuntimeException(message ?: "KraftPulse Test Exception: Something went wrong!")
     }
 
-    @GetMapping("/test-manual-capture")
-    fun manualCapture(): String {
-        return try {
-            val list = listOf("A", "B")
-            println(list[5])
-            "Success"
-        } catch (e: Exception) {
-            KraftPulse.recordException(e, mapOf(
-                "custom_key" to "Testing Manual Injection",
-                "layer" to "Controller"
-            ))
-            "Captured"
-        }
-    }
+//    @GetMapping("/test-manual-capture")
+//    fun manualCapture(): String {
+//        return try {
+//            val list = listOf("A", "B")
+//            println(list[5])
+//            "Success"
+//        } catch (e: Exception) {
+//            KraftPulse.recordException(e, mapOf(
+//                "custom_key" to "Testing Manual Injection",
+//                "layer" to "Controller"
+//            ))
+//            "Captured"
+//        }
+//    }
 
     @GetMapping("/test-event")
     fun triggerEvent(@RequestParam(defaultValue = "Hello from BowerzLabs!") msg: String): String {
