@@ -1,17 +1,18 @@
 package discovery.descriptors.column
 
 import com.kraftadmin.enums.ProviderType
+import com.kraftadmin.logging.KraftAdminLogging
 import discovery.descriptors.column.jpa.JpaColumnBuildStrategy
 import discovery.descriptors.column.mongo.MongoColumnBuildStrategy
 import discovery.descriptors.column.r2dbc.R2dbcColumnBuildStrategy
-import org.slf4j.LoggerFactory
 
 /**
  * Selects the correct strategy based on the active provider.
  */
 object ColumnBuildStrategyFactory {
 
-    private val logger = LoggerFactory.getLogger(ColumnBuildStrategyFactory::class.java)
+
+    private val logger = KraftAdminLogging.logger(javaClass)
 
     fun create(provider: ProviderType): ColumnBuildStrategy {
 

@@ -1,8 +1,7 @@
 package discovery.descriptors.column
 
 import com.kraftadmin.spi.KraftAdminColumn
-import com.kraftadmin.ui_descriptors.ColumnDescriptor
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
@@ -18,14 +17,13 @@ class KraftColumnBuilder(
     private val strategy: ColumnBuildStrategy
 ) {
 
-    val logger  = LoggerFactory.getLogger(KraftColumnBuilder::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
 
     init {
         logger.info("KraftColumnBuilder init with strategy: $strategy")
     }
 
     fun build(entityClass: KClass<*>): List<KraftAdminColumn> {
-        logger.info("KraftColumnBuilder building {} -> {}", entityClass, strategy)
         return strategy.buildColumns(
             entityClass,
             getAllProperties(entityClass)
@@ -39,7 +37,6 @@ class KraftColumnBuilder(
         kClass: KClass<*>
     ): List<KProperty1<out Any, *>> {
 
-        logger.info("getting all info for $kClass")
 
         val properties = mutableListOf<KProperty1<out Any, *>>()
 

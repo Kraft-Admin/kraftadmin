@@ -5,11 +5,10 @@ import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.events.KraftLifecycleService
 import com.kraftadmin.spi.KraftAdminColumn
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.EntityManager
 import jakarta.persistence.EntityNotFoundException
-import org.slf4j.LoggerFactory
 import org.springframework.transaction.support.TransactionTemplate
-import persistence.error.PersistenceError
 import persistence.error.PersistenceErrorResolver
 import persistence.error.PersistenceException
 import persistence.jpa.mapper.ResourceRowMapper
@@ -26,10 +25,11 @@ class FetchById<T : Any>(
     private val lifecycle: KraftLifecycleService,
     val errorResolver: PersistenceErrorResolver
 ) {
-    private val logger = LoggerFactory.getLogger(FetchById::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     fun execute(id: String, columns: List<KraftAdminColumn>): ResourceRow? {
-        val context = KraftAdminContextHolder.eventContext()
+        val context = KraftAdminContextHolder.adminContext()
 
         return transactionTemplate.execute { _ ->
             try {

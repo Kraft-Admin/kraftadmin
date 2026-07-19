@@ -1,6 +1,6 @@
 package discovery
 
-import com.kraftadmin.discovery.JpaEntityDiscoverer
+import discovery.discoverer.jpa.JpaEntityDiscoverer
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.persistence.EntityManagerFactory
@@ -35,7 +35,7 @@ class JpaEntityDiscovererTest {
         val result = discoverer.discover()
 
         // Assert
-        assertEquals("JPA", discoverer.name)
+        assertEquals("JPA", discoverer.provider)
         assertEquals(1, result.size)
         assertTrue(result.contains(SampleJpaEntity::class.java))
     }

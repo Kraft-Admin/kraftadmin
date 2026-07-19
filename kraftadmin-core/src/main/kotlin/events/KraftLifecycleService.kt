@@ -27,4 +27,12 @@ interface KraftLifecycleService {
     // Export/Print
     fun onBeforeExport(event: KraftAdminEvent.BeforeExport)
     fun onAfterPrint(event: KraftAdminEvent.AfterPrint)
+    fun onCreateFailed(event: KraftAdminEvent.CreateFailed) {}
+    fun onDeleteFailed(deleteFailed: com.kraftadmin.events.KraftAdminEvent.DeleteFailed)
+    fun onAfterFetchById(afterFetchById: KraftAdminEvent.AfterFetchById)
+    fun onBeforeFetchById(beforeFetchById: KraftAdminEvent.BeforeFetchById)
+    fun onFetchByIdFailed(fetchByIdFailed: KraftAdminEvent.FetchByIdFailed)
+    fun onBeforeFetchAll(beforeFetchAll: com.kraftadmin.events.KraftAdminEvent.BeforeFetchAll)
+    fun onAfterFetchAll(afterFetchAll: com.kraftadmin.events.KraftAdminEvent.AfterFetchAll)
+    fun onFetchAllFailed(fetchAllFailed: com.kraftadmin.events.KraftAdminEvent.FetchAllFailed)
 }

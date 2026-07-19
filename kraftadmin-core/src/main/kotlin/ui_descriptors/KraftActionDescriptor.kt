@@ -31,7 +31,7 @@ data class KraftActionDescriptor(
     /** Confirmation dialog */
     val confirmMessage: String? = null,
 
-    /** Optional form schema name */
+    /** Optional form schema provider */
     val input: KraftActionInputDescriptor? = null,
 
     /** Hide after execution */

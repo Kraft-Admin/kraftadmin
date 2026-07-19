@@ -56,7 +56,7 @@ tasks.register<Exec>("generateIcons") {
     // Keep inputs/outputs defined for dependency tracking,
     // but the flag above ensures execution anyway.
     inputs.file(uiDir.resolve("package.json"))
-    outputs.file(rootProject.projectDir.resolve("./kraftadmin-core/src/main/kotlin/com/kraftadmin/enums/KraftIcon.kt"))
+    outputs.file(rootProject.projectDir.resolve("./kraftadmin-core/src/main/kotlin/enums/KraftIcon.kt"))
 }
 
 // Ensure the UI is built before the resources are processed into the JAR

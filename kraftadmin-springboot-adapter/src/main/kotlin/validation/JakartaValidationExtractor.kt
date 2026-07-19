@@ -1,13 +1,12 @@
-package util
+package validation
 
 import com.kraftadmin.annotations.KraftAdminField
 import annotations.KraftAnnotationUtils
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
+import com.kraftadmin.logging.KraftAdminLogging
 import com.kraftadmin.utils.validation.KraftValidationExtractor
-import org.slf4j.LoggerFactory
-import validation.ValidationRuleBuilder
 import kotlin.Annotation as JavaAnnotation
 import java.lang.reflect.Field
 
@@ -25,7 +24,7 @@ import java.lang.reflect.Field
  */
 class JakartaValidationExtractor : KraftValidationExtractor {
 
-    private val log = LoggerFactory.getLogger(JakartaValidationExtractor::class.java)
+    private val log = KraftAdminLogging.logger(javaClass)
 
     // ✅ Fully-qualified Jakarta annotation class names — strings only, never imported
     private object JakartaAnnotations {

@@ -26,11 +26,14 @@ data class KraftAdminProperties(
     override var localeConfig: SpringLocaleProperties = SpringLocaleProperties(),
     @NestedConfigurationProperty
     override var telemetryConfig: TelemetryProperties = TelemetryProperties(),
+    @NestedConfigurationProperty
+    override var loggingConfig: KraftAdminLoggingProperties =
+        KraftAdminLoggingProperties()
 ) : KraftAdminPropertiesConfig {
 
-    init {
-        println("kraftPulseSpringKraftAdminProperties: $this")
-    }
+//    init {
+//        println("kraftPulseSpringKraftAdminProperties: $this")
+//    }
 
     class SpringThemeProperties(
         override var primaryColor: String = "#3b82f6",
@@ -43,9 +46,9 @@ data class KraftAdminProperties(
     ) : StorageConfig
 
     class SpringSecurityProperties(
-        override var cookieName: String = "KRAFT_SESSION",
+        override var cookieName: String = "KRAFTADMIN_SESSION",
         override var sessionExpiryMinutes: Long = 60,
-        override var requiredRoles: Set<String> = setOf("ROLE_ADMIN"),
+        override var requiredRoles: List<String> = emptyList(),
         override var protectedRoutes: Map<String, Set<String>> = emptyMap(),
         @NestedConfigurationProperty
         override var basicAuth: BasicAuthConfig = BasicAuthConfig()
@@ -75,5 +78,10 @@ data class KraftAdminProperties(
         override val apiKey: String? = null,
         override val secretKey: String? = null
     ) : TelemetryConfig
+
+
+    data class KraftAdminLoggingProperties(
+        override var enabled: Boolean = true
+    ) : LoggingConfig
 
 }

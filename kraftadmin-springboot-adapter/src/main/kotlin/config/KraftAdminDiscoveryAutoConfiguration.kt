@@ -1,13 +1,11 @@
-package com.kraftadmin.config
+package config
 
+import com.kraftadmin.logging.KraftAdminLogging
 import com.kraftadmin.spi.EntityDiscoverer
-import com.kraftadmin.discovery.EntityDiscoveryService
-import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.ObjectProvider
+import com.kraftadmin.spi.EntityDiscoveryService
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
 import org.springframework.context.annotation.Bean
 
 @AutoConfiguration
@@ -15,24 +13,25 @@ import org.springframework.context.annotation.Bean
     KraftAdminJpaAutoConfiguration::class,
     KraftAdminMongoAutoConfiguration::class
 )
-@ConditionalOnProperty(prefix = "kraftpulse", name = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class KraftAdminDiscoveryAutoConfiguration {
 
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     @Bean
     fun entityDiscoveryService(
         discoverers: List<EntityDiscoverer>
     ): EntityDiscoveryService {
-        logger.info("🔧 Creating EntityDiscoveryService")
-        logger.info("   Discoverers found: ${discoverers.size}")
+//        logger.info("Creating EntityDiscoveryService")
+//        logger.info("   Discoverers found: ${discoverers.size}")
 
         discoverers.forEach { discoverer ->
-            logger.info("   - ${discoverer.name} Discoverer")
+            logger.info("   - ${discoverer.provider} Discoverer")
         }
 
         if (discoverers.isEmpty()) {
-            logger.warn("⚠️  No discoverers registered! Entities won't be found.")
+            logger.warn("No discoverers registered! Entities won't be found.")
         }
 
         return EntityDiscoveryService(discoverers)

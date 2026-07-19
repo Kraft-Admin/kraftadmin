@@ -1,8 +1,8 @@
 package persistence.jpa.conversion
 
 import api.utils.ObjectResponse
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.*
-import org.slf4j.LoggerFactory
 import persistence.jpa.metadata.AssociationResolver
 import persistence.jpa.util.HibernateUtil
 import java.lang.reflect.Field
@@ -16,7 +16,8 @@ import java.lang.reflect.Field
  */
 object ValueConverter {
 
-    private val logger = LoggerFactory.getLogger(ValueConverter::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     /**
      * Wrapper for embedded value objects.

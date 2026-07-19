@@ -2,19 +2,20 @@ package persistence.jpa.lookup
 
 import api.utils.ObjectResponse
 import com.kraftadmin.annotations.KraftAdminField
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.EntityManager
 import jakarta.persistence.Id
-import org.slf4j.LoggerFactory
 import persistence.jpa.metadata.AssociationResolver
 import persistence.jpa.metadata.EntityMetadata
 import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
 
 class LookupQuery(private val entityManager: EntityManager) {
 
-    private val logger = LoggerFactory.getLogger(LookupQuery::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
 
     private val LABEL_CANDIDATES = listOf(
         "name", "title", "label", "email", "username", "code", "fullName", "displayName"
@@ -130,19 +131,26 @@ class LookupQuery(private val entityManager: EntityManager) {
         fun value(field: String?): String? {
             if (field.isNullOrBlank()) return null
 
-            return props[field]
-                ?.getter
-                ?.call(entity)
+            val property = props[field] ?: return null
+
+            property.isAccessible = true
+
+            return property
+                .getter
+                .call(entity)
                 ?.toString()
                 ?.takeIf(String::isNotBlank)
         }
 
         val annotatedField =
-            entity::class.memberProperties.firstOrNull {
-                it.javaField
-                    ?.getAnnotation(KraftAdminField::class.java)
-                    ?.displayField == true
-            }?.name
+            entity::class.memberProperties
+                .firstOrNull { property ->
+                    property.isAccessible = true
+                    property.javaField
+                        ?.getAnnotation(KraftAdminField::class.java)
+                        ?.displayField == true
+                }
+                ?.name
 
         val label =
             value(annotatedField)

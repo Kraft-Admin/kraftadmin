@@ -3,15 +3,16 @@ package discovery.discoverer.jpa
 import com.kraftadmin.enums.ProviderType
 import com.kraftadmin.spi.DiscoveredEntity
 import com.kraftadmin.spi.EntityDiscoverer
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.EntityManagerFactory
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 
 class JpaEntityDiscoverer(
     private val applicationContext: ApplicationContext
 ) : EntityDiscoverer {
 
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
     override val provider: ProviderType = ProviderType.JPA
 
     override fun discover(): Set<DiscoveredEntity<*>> {

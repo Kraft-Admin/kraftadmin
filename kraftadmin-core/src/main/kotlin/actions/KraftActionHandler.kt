@@ -19,7 +19,7 @@ import com.kraftadmin.context.KraftActionContext
  * ```
  */
 interface KraftActionHandler {
-    /** Must match @KraftAdminCustomAction.name exactly */
+    /** Must match @KraftAdminCustomAction.provider exactly */
     val actionName: String
 
     fun execute(context: KraftActionContext): KraftActionResponse

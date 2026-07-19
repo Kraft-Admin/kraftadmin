@@ -1,5 +1,6 @@
 package security
 
+import com.kraftadmin.logging.KraftAdminLogging
 import org.slf4j.LoggerFactory
 import java.util.Base64
 import java.util.UUID
@@ -14,7 +15,7 @@ import java.util.UUID
 class BuiltinBasicAuthProvider(
     config: BasicAuthConfig
 ) : AdminSecurityProvider {
-    private val logger = LoggerFactory.getLogger(BuiltinBasicAuthProvider::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
     private val username: String = config.username
     private val roles = config.roles
 

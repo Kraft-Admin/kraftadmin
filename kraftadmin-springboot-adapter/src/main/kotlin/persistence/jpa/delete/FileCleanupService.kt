@@ -3,13 +3,13 @@ package persistence.jpa.delete
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
 import com.kraftadmin.utils.files.AdminStorageProvider
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Embedded
 import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
-import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
 import java.util.Collections
 import java.util.IdentityHashMap
@@ -18,7 +18,8 @@ class FileCleanupService(
     private val adminStorageProvider: AdminStorageProvider
 ) {
 
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     private val fileInputs = setOf(
         FormInputType.IMAGE,

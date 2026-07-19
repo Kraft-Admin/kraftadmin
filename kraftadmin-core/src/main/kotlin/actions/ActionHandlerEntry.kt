@@ -1,8 +1,8 @@
 package actions
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.kraftadmin.KraftAdmin.logger
 import com.kraftadmin.context.KraftActionContext
+import com.kraftadmin.logging.KraftAdminLogging
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -17,6 +17,8 @@ data class ActionHandlerEntry(
     val descriptor: KraftActionDescriptor
 ) {
     private val mapper = ObjectMapper()
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     fun bindInput(rawInput: Any?): Any? {
 

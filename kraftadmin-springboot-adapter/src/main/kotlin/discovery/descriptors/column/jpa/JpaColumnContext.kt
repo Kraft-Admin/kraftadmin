@@ -1,6 +1,6 @@
 package discovery.descriptors.column.jpa
 
-import util.JakartaValidationExtractor
+import validation.JakartaValidationExtractor
 import kotlin.reflect.KClass
 
 class JpaColumnContext(

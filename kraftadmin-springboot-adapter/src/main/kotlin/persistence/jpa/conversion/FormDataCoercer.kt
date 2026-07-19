@@ -1,7 +1,7 @@
 package persistence.jpa.conversion
 
 import api.utils.ObjectResponse
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 import persistence.jpa.conversion.ValueConverter.EmbeddedResponse
 
 /**
@@ -18,7 +18,9 @@ import persistence.jpa.conversion.ValueConverter.EmbeddedResponse
  */
 object FormDataCoercer {
 
-    private val logger = LoggerFactory.getLogger(FormDataCoercer::class.java)
+
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     fun coerce(data: Map<String, Any?>): Map<String, Any?> {
         return data.mapValues { (key, value) ->
@@ -31,71 +33,34 @@ object FormDataCoercer {
         }
     }
 
-    fun coerceValue1(value: Any?): Any? {
+    fun coerceValue(value: Any?): Any? {
         return when {
             value == null -> null
-
-            // ── Kotlin data class: api.utils.ObjectResponse ───────────────
             value is ObjectResponse -> value.id
-
-            // ── Kotlin data class: ValueConverter.EmbeddedResponse ────────
             value is EmbeddedResponse -> coerceEmbeddedData(value.data)
 
-            // ── Raw map shaped like ObjectResponse ────────────────────────
-            // { id: "...", displayField: "..." }
             isObjectResponseMap(value) -> extractIdFromMap(value as Map<*, *>)
-
-            // ── Raw map shaped like EmbeddedResponse ──────────────────────
-            // { summary: "...", data: { ... } }
             isEmbeddedResponseMap(value) -> {
                 @Suppress("UNCHECKED_CAST")
                 val data = (value as Map<*, *>)["data"] as? Map<String, Any?> ?: emptyMap()
                 coerceEmbeddedData(data)
             }
 
-            // ── Plain map (already-unwrapped embedded or sub-object) ───────
+            // Plain map that isn't a wrapped response shape: recurse into it so
+            // nested relations (ObjectResponse-shaped sub-fields) still get unwrapped.
+            // Safe no-op for scalar-only maps (e.g. {"key":..,"value":..} rows), since
+            // coerceValue on a String/Int just passes it through unchanged.
             value is Map<*, *> -> {
                 @Suppress("UNCHECKED_CAST")
                 coerceEmbeddedData(value as Map<String, Any?>)
             }
 
-            // ── List / Collection ─────────────────────────────────────────
             value is List<*> -> coerceList(value)
-
-            // ── Primitives, strings, enums ────────────────────────────────
             else -> value
         }
     }
 
-    fun coerceValue(value: Any?): Any? {
-        logger.info(
-            "coerceValue: type={}, value={}",
-            value?.javaClass?.name,
-            value
-        )
-        return when {
-            value == null -> null
-            value is ObjectResponse -> value.id
-            value is EmbeddedResponse -> coerceEmbeddedData(value.data)
-
-            // ONLY coerce if it looks like a wrapped response, NOT just any map
-            isObjectResponseMap(value) -> extractIdFromMap(value as Map<*, *>)
-            isEmbeddedResponseMap(value) -> {
-                @Suppress("UNCHECKED_CAST")
-                val data = (value as Map<*, *>)["data"] as? Map<String, Any?> ?: emptyMap()
-                coerceEmbeddedData(data)
-            }
-
-            // If it's a plain map and NOT one of the above, leave it alone!
-            value is Map<*, *> -> value
-
-            value is List<*> -> coerceList(value)
-            else -> value
-        }
-
-    }
-
-    // ─── Shape detectors ─────────────────────────────────────────────────────
+    //  Shape detectors
 
     private fun isObjectResponseMap(value: Any?): Boolean {
         if (value !is Map<*, *>) return false
@@ -107,7 +72,7 @@ object FormDataCoercer {
         return value.containsKey("summary") && value.containsKey("data")
     }
 
-    // ─── Extractors ──────────────────────────────────────────────────────────
+    // Extractors
 
     private fun extractIdFromMap(map: Map<*, *>): String? {
         return map["id"]?.toString()?.takeIf { it.isNotBlank() }

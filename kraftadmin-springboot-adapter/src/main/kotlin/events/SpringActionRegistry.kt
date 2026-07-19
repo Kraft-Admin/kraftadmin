@@ -1,18 +1,16 @@
 package events
 
 import actions.ActionHandlerEntry
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kraftadmin.annotations.KraftAdminCustomAction
-import com.kraftadmin.annotations.toDescriptor
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import com.kraftadmin.ui_descriptors.KraftActionInputDescriptor
 import com.kraftadmin.ui_descriptors.KraftFieldDescriptorFactory
+import com.kraftadmin.logging.KraftAdminLogging
+import com.kraftadmin.utils.toDescriptor
 import jakarta.annotation.PostConstruct
-import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Component
-import kotlin.collections.forEach
 import kotlin.reflect.KClass
 
 @Component
@@ -20,7 +18,8 @@ import kotlin.reflect.KClass
 class SpringActionRegistry(
     private val applicationContext: ApplicationContext
 ) {
-    private val logger = LoggerFactory.getLogger(SpringActionRegistry::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     // This map stores the association between an action provider and its executable method
     private val actionHandlers = mutableMapOf<String, ActionHandlerEntry>()

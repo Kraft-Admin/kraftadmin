@@ -3,6 +3,7 @@ package spi
 import api.responses.KraftOperationResponse
 import api.responses.PagedResponse
 import api.utils.ResourceRow
+import com.kraftadmin.enums.ProviderType
 import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import com.kraftadmin.ui_descriptors.ResourceDescriptor
@@ -31,10 +32,11 @@ interface KraftAdminResource<T : Any> {
     fun getIdentifier(entity: T): Any
 
     var dataProvider: KraftDataProvider<T>?
+    val provider: ProviderType
 
     /**
      * Fetch all rows for this resource
-     * Returns a list of maps where key = column name, value = field value
+     * Returns a list of maps where key = column provider, value = field value
      */
     fun getAllRows(
         page: Int,
@@ -73,6 +75,7 @@ interface KraftAdminResource<T : Any> {
             exportable = isExportable,
             searchableFields = searchableColumns,
             sortableFields = sortableColumns,
+            provider = provider,
         )
 
 }

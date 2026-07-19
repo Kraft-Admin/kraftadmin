@@ -4,7 +4,7 @@ import com.kraftadmin.enums.FormInputType
 
 data class KraftFieldDescriptor(
 
-    /** Java property name */
+    /** Java property provider */
     val name: String,
 
     /** Label shown in the UI */

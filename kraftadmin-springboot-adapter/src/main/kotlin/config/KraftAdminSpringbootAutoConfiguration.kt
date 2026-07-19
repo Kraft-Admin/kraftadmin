@@ -1,6 +1,10 @@
-package com.kraftadmin.config
+package config
 
 import com.kraftadmin.KraftAdmin
+import com.kraftadmin.config.KraftAdminConfig
+import com.kraftadmin.config.KraftAdminRuntimeConfig
+import com.kraftadmin.events.KraftEventConsumer
+import com.kraftadmin.logging.KraftAdminLogging
 import com.kraftadmin.spi.EntityDiscoveryService
 import discovery.ResourceGenerator
 import discovery.discoverer.environment.SpringBootEnvironmentProvider
@@ -11,17 +15,14 @@ import com.kraftadmin.utils.files.CloudinaryProvider
 import com.kraftadmin.utils.files.LocalFileSystemAdapter
 import com.kraftadmin.utils.files.S3Adapter
 import com.kraftadmin.utils.validation.KraftValidationExtractor
-import config.KraftAdminWebConfiguration
-import config.KraftAdminProperties
-import config.KraftAdminVersionGuardAutoConfiguration
-import config.PersistenceValidatorConfiguration
 import controller.KraftAdminSpringbootUploadController
+import events.KraftAdminEventLogger
+import events.KraftAdminEventStore
 import events.SpringKraftEventPublisher
 import events.SpringActionRegistry
 import events.SpringListenerRegistry
 import exception.KraftAdminExceptionHandler
 import json.KraftJsonSerializer
-import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -35,7 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import events.SpringKraftLifecycleService
 import util.JacksonKraftJsonSerializer
-import util.JakartaValidationExtractor
+import validation.JakartaValidationExtractor
 
 @AutoConfiguration
 @Import(
@@ -44,7 +45,8 @@ import util.JakartaValidationExtractor
     KraftAdminMongoAutoConfiguration::class,
     KraftAdminDiscoveryAutoConfiguration::class,
     KraftAdminWebConfiguration::class,
-    PersistenceValidatorConfiguration::class
+    PersistenceValidatorConfiguration::class,
+    KraftAdminEventLogger::class
 )
 @EnableConfigurationProperties(KraftAdminProperties::class)
 @ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true", matchIfMissing = false)
@@ -52,14 +54,13 @@ class KraftAdminSpringBootAutoConfiguration(
     private val properties: KraftAdminProperties,
     private val applicationContext: ApplicationContext,
     private val entityDiscoveryService: EntityDiscoveryService,
-//    private val applicationEventPublisher: ApplicationEventPublisher,
-//    private val sqliteProvider: SQLiteTelemetryProvider
 ) {
 
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = KraftAdminLogging.logger(javaClass)
 
     init {
-        logger.info("KraftAdmin: Spring Boot Auto-Configuration initialized with properties: $properties")
+        KraftAdminLogging.enabled =
+            properties.loggingConfig.enabled
     }
 
     @Bean
@@ -85,12 +86,6 @@ class KraftAdminSpringBootAutoConfiguration(
 
             val resources = entities.map { ResourceGenerator.generate(it, context = context, properties = properties) }
 
-            logger.info("found ${resources.size} resources from resource generation")
-
-            resources.forEach { resource ->
-                logger.info("Found resource columns ${resource.columns.size}")
-            }
-
             val config = KraftAdminConfig(
                 basePath = properties.basePath,
                 title = properties.title,
@@ -100,11 +95,6 @@ class KraftAdminSpringBootAutoConfiguration(
 
             runtimeConfig.set(config)
             KraftAdmin.start(config)
-//
-//            logger.info("=" .repeat(70))
-//            logger.info("KraftAdmin Started Successfully")
-//            logger.info("Total registered management entities: ${entities.size}")
-//            logger.info("=" .repeat(70))
         }
     }
 
@@ -122,14 +112,27 @@ class KraftAdminSpringBootAutoConfiguration(
 
     @Bean
     @ConditionalOnMissingBean(SpringKraftEventPublisher::class)
-    fun kraftEventPublisher(registry: SpringListenerRegistry): SpringKraftEventPublisher {
-        return SpringKraftEventPublisher(registry)
+    fun kraftEventPublisher(
+        registry: SpringListenerRegistry,
+        consumers: List<KraftEventConsumer>
+    ): SpringKraftEventPublisher {
+
+        return SpringKraftEventPublisher(
+            registry,
+            consumers
+        )
     }
 
     @Bean
     @ConditionalOnMissingBean(SpringKraftLifecycleService::class)
     fun kraftSpringLifeCycle(publisher: SpringKraftEventPublisher): SpringKraftLifecycleService {
         return SpringKraftLifecycleService(publisher)
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun kraftEventStore() : KraftAdminEventStore {
+        return KraftAdminEventStore()
     }
 
     @Bean
@@ -194,7 +197,6 @@ class KraftAdminSpringBootAutoConfiguration(
                     val classLoader = context.classLoader ?: Thread.currentThread().contextClassLoader ?: javaClass.classLoader
                     val cloudinaryClass = Class.forName("com.cloudinary.Cloudinary", true, classLoader)
                     val instance = cloudinaryClass.getConstructor(String::class.java).newInstance(cloudinaryUrl)
-                    logger.info("KraftAdmin: Spawning separate Cloudinary runtime container from environment variables.")
                     return CloudinaryProvider(instance)
                 } catch (e: Exception) {
                     logger.warn("KraftAdmin: CLOUDINARY_URL found but class initialization failed: ${e.message}")

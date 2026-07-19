@@ -2,9 +2,11 @@ package config
 
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+import util.KraftRequestTimingInterceptor
 
 import java.io.File
 
@@ -31,6 +33,11 @@ class KraftAdminWebConfiguration : WebMvcConfigurer {
     override fun addViewControllers(registry: ViewControllerRegistry) {
         registry.addRedirectViewController("/admin", "/admin/")
         registry.addViewController("/admin/").setViewName("forward:/admin/index.html")
+    }
+
+    override fun addInterceptors(registry: InterceptorRegistry) {
+        registry.addInterceptor(KraftRequestTimingInterceptor())
+            .addPathPatterns("/admin/api/**")
     }
 
 }

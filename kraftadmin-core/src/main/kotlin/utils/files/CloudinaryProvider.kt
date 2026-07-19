@@ -1,5 +1,6 @@
 package com.kraftadmin.utils.files
 
+import com.kraftadmin.logging.KraftAdminLogging
 import org.slf4j.LoggerFactory
 import java.util.Map
 
@@ -14,13 +15,14 @@ class CloudinaryProvider(
     private val cloudinary: Any
 ) : AdminStorageProvider {
 
-    private val logger = LoggerFactory.getLogger(CloudinaryProvider::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     /**
      * Uploads an asset payload directly to Cloudinary.
      * Invokes `cloudinary.uploader().upload(bytes, params)` underneath the hood via reflection.
      */
-    override fun upload(bytes: ByteArray, fileName: String, context: String): String {
+    override fun upload(bytes: ByteArray, fileName: String, context: String, baseUrl: String): String {
         try {
             // Get the internal Uploader instance: cloudinary.uploader()
             val uploader = cloudinary.javaClass.getMethod("uploader").invoke(cloudinary)

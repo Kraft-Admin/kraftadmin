@@ -1,12 +1,12 @@
 package persistence.service
 
+import com.kraftadmin.logging.KraftAdminLogging
 import config.KraftAdminProperties
 import dtos.PublicKraftAdminSettings
 import dtos.SettingsUpdateRequest
 import dtos.toPublicSettings
 import jakarta.annotation.PostConstruct
 import json.KraftJsonSerializer
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
@@ -21,28 +21,22 @@ class KraftSettingsService(
     private val serializer: KraftJsonSerializer,
     @param:Value("\${kraftadmin.settings-file:kraft-settings.json}") private val fileName: String
 ) {
-    private val logger = LoggerFactory.getLogger(KraftSettingsService::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
     private val settingsFile: File = File(System.getProperty("user.dir"), fileName)
 
     @PostConstruct
     fun init() {
-        logger.info(
-            "KraftAdmin: settings file target = {} (exists={}, writable={})",
-            settingsFile.absolutePath, settingsFile.exists(), settingsFile.parentFile?.canWrite()
-        )
 
         if (settingsFile.exists()) {
             try {
                 val overrides = serializer.fromJson(settingsFile.readText(), SettingsUpdateRequest::class.java)
-                logger.info("KraftAdmin: loaded from disk: {}", overrides)
                 applyUpdate(overrides)
-                logger.info("KraftAdmin: UI Settings synchronized from ${settingsFile.absolutePath}")
             } catch (e: Exception) {
                 logger.error("Failed to load existing Kraft settings from ${settingsFile.name}", e)
             }
         } else {
             try {
-                logger.info("KraftAdmin: No settings file found. Creating default at ${settingsFile.absolutePath}")
                 saveToFile()
             } catch (e: Exception) {
                 logger.error("Could not bootstrap default settings file", e)
@@ -105,13 +99,12 @@ class KraftSettingsService(
     }
 
     fun updateSettings(request: SettingsUpdateRequest): PublicKraftAdminSettings {
-        logger.info("KraftAdmin: applying settings update: {}", request)
         applyUpdate(request)
         try {
             saveToFile()
             logger.info("Successfully persisted settings to ${settingsFile.absolutePath}")
         } catch (e: Exception) {
-            logger.error("Failed to write settings update to disk at {}", settingsFile.absolutePath, e)
+            logger.error("Failed to write settings update to disk at {}", e)
             throw IllegalStateException("Settings applied in memory but could not be saved: ${e.message}", e)
         }
         return properties.toPublicSettings()

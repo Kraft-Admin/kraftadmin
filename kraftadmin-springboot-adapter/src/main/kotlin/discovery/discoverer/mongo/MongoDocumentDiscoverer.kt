@@ -1,17 +1,17 @@
-package com.kraftadmin.discovery
+package discovery.discoverer.mongo
 
+import com.kraftadmin.enums.ProviderType
+import com.kraftadmin.spi.DiscoveredEntity
 import com.kraftadmin.spi.EntityDiscoverer
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
-import org.springframework.data.mongodb.core.mapping.MongoMappingContext
 
 class MongoDocumentDiscoverer(
     private val applicationContext: ApplicationContext
 ) : EntityDiscoverer {
 
-    override val name: String = "Mongo"
+    override val provider: ProviderType = ProviderType.JPA
 
-    override fun discover(): Set<Class<*>> {
+    override fun discover(): Set<DiscoveredEntity<*>> {
         val mongoContextClass = try {
             Class.forName("org.springframework.data.mongodb.core.mapping.MongoMappingContext")
         } catch (_: ClassNotFoundException) {
@@ -27,10 +27,10 @@ class MongoDocumentDiscoverer(
         val persistentEntities =
             mongoContextClass.getMethod("getPersistentEntities").invoke(mongoContext) as Iterable<*>
 
-        return persistentEntities.mapNotNull {
-            it!!.javaClass.getMethod("getType").invoke(it) as Class<*>
-        }.toSet()
+//        return persistentEntities.mapNotNull {
+//            it!!.javaClass.getMethod("getType").invoke(it) as Class<*>
+//        }.toSet()
+
+        return emptySet()
     }
 }
-
-

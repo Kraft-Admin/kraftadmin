@@ -2,8 +2,8 @@ package events
 
 import annotations.KraftAdminOn
 import com.kraftadmin.events.KraftAdminEvent
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.annotation.PostConstruct
-import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Component
@@ -20,14 +20,14 @@ class SpringListenerRegistry(
     private val applicationContext: ApplicationContext
 ) : KraftListenerRegistry {
 
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     private val listeners =
         mutableMapOf<Class<out KraftAdminEvent>, MutableList<ListenerEntry>>()
 
     @PostConstruct
     fun discover() {
-        logger.info("Scanning KraftAdmin listeners...")
         var discovered = 0
 
         // ✅ Scan @KraftAdminEventListener marked classes first for cleaner logging

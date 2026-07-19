@@ -6,8 +6,8 @@ package com.kraftadmin.annotations
  * @KraftAdminResource will be automatically scanned and exposed via the Admin UI,
  * provided it is registered within the Runtime Config.
  *
- * @property label The human-readable name of the resource. If blank, the engine
- * infers the name from the class (e.g., "UserAccount" -> "User Account").
+ * @property label The human-readable provider of the resource. If blank, the engine
+ * infers the provider from the class (e.g., "UserAccount" -> "User Account").
  * @property group Categorizes the resource in the sidebar. Resources with the same group
  * are clustered together under a collapsible header.
  * @property icon The visual identifier in the sidebar. Supports Unicode emojis or

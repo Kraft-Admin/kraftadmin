@@ -8,12 +8,11 @@ import org.slf4j.LoggerFactory
  */
 data class ObjectResponse(
     val id: String,
-    val displayField: Any? = "Unknown"
+    val label: String,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     init {
-        // Reduced to debug to avoid log bloat in production
-        logger.debug("Mapping relation: ID=$id, Label=$displayField")
+        logger.debug("Mapping relation: ID=$id, Label=$label")
     }
 }

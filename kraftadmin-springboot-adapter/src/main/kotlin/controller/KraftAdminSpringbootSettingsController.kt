@@ -1,10 +1,8 @@
-package com.kraftadmin.controller
+package controller
 
 import persistence.service.KraftSettingsService
-import config.KraftAdminProperties
 import dtos.PublicKraftAdminSettings
 import dtos.SettingsUpdateRequest
-import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -20,51 +18,23 @@ import org.springframework.web.bind.annotation.RestController
 class KraftSettingsController(
     private val settingsService: KraftSettingsService
 ) {
-    private val logger = LoggerFactory.getLogger(javaClass)
 
     /**
      * GET the current merged configuration.
      * Svelte calls this to populate the "Settings" forms.
      */
-//    @GetMapping
-//    fun getSettings(): ResponseEntity<KraftAdminProperties> {
-//        return ResponseEntity.ok(settingsService.getCurrentProperties())
-//    }
 
-    /**
-     * POST updated configuration from the UI.
-     * This triggers the merge and the file persistence.
-     */
-//    @PostMapping
-//    fun updateSettings(@RequestBody newSettings: SpringKraftAdminProperties): ResponseEntity<Map<String, String>> {
-//        return try {
-//            logger.info("KraftAdmin: Receiving UI settings update for title: ${newSettings.title}")
-//
-//            // 1. Trigger the merge and file save
-//            settingsService.updateSettings(newSettings)
-//
-//            // 2. Return a friendly response for the Svelte toast notification
-//            ResponseEntity.ok(mapOf("message" to "Settings updated successfully!"))
-//        } catch (e: Exception) {
-//            logger.error("Failed to update KraftAdmin settings", e)
-//            ResponseEntity.internalServerError().body(mapOf("error" to "Failed to save settings: ${e.message}"))
-//        }
-//    }
-//
-//    @PostMapping
-//    fun updateSettings(@RequestBody newSettings: KraftAdminProperties): ResponseEntity<KraftAdminProperties> {
-//        logger.info("KraftAdmin: Receiving UI settings update for title: ${newSettings.title}")
-//        val updated = settingsService.updateSettings(newSettings)
-//        return ResponseEntity.ok(updated)
-//    }
 
     @GetMapping
     fun getSettings(): ResponseEntity<PublicKraftAdminSettings> =
         ResponseEntity.ok(settingsService.getPublicSettings())
 
+    /**
+     * POST updated configuration from the UI.
+     * This triggers the merge and the file persistence.
+     */
     @PostMapping
     fun updateSettings(@RequestBody request: SettingsUpdateRequest): ResponseEntity<PublicKraftAdminSettings> {
-        logger.info("KraftAdmin: Receiving UI settings update for title: {}", request.title)
         return ResponseEntity.ok(settingsService.updateSettings(request))
     }
 

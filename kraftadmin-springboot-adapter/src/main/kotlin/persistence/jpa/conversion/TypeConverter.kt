@@ -1,249 +1,6 @@
-//package persistence.jpa.conversion
-//
-//import jakarta.persistence.ElementCollection
-//import jakarta.persistence.Embeddable
-//import jakarta.persistence.Embedded
-//import org.slf4j.LoggerFactory
-//import java.lang.reflect.Field
-//import java.math.BigDecimal
-//import java.time.LocalDate
-//import java.time.LocalDateTime
-//import java.time.format.DateTimeFormatter
-//import java.util.UUID
-//import kotlin.reflect.KClass
-//
-///**
-// * Converts raw form values into the exact Java type required by an entity field.
-// */
-//object TypeConverter {
-//
-//    private val logger = LoggerFactory.getLogger(TypeConverter::class.java)
-//
-//    private val DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE
-//    private val DATETIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-//
-//    @Suppress("UNCHECKED_CAST")
-//    fun convert(
-//        value: Any?,
-//        targetType: Class<*>,
-//        field: Field? = null
-//    ): Any? {
-//
-//        if (value == null) {
-//            return null
-//        }
-//
-//        // Handle @ElementCollection first
-//        if (field?.isAnnotationPresent(ElementCollection::class.java) == true) {
-//            return convertElementCollection(value, field)
-//        }
-//
-//        val isEmbedded =
-//            field?.isAnnotationPresent(Embedded::class.java) == true ||
-//                    targetType.isAnnotationPresent(Embeddable::class.java)
-//
-//        if (isEmbedded) {
-//            return convertEmbedded(value, targetType)
-//        }
-//
-//        if (targetType.isInstance(value)) {
-//            return value
-//        }
-//
-//        return try {
-//            val str = value.toString()
-//
-//            when {
-//
-//                targetType == String::class.java ->
-//                    str
-//
-//                targetType == Boolean::class.java ||
-//                        targetType == java.lang.Boolean::class.java ->
-//                    str.equals("true", true) || str == "1"
-//
-//                targetType == Int::class.java ||
-//                        targetType == java.lang.Integer::class.java ->
-//                    str.toInt()
-//
-//                targetType == Long::class.java ||
-//                        targetType == java.lang.Long::class.java ->
-//                    str.toLong()
-//
-//                targetType == Double::class.java ||
-//                        targetType == java.lang.Double::class.java ->
-//                    str.toDouble()
-//
-//                targetType == Float::class.java ||
-//                        targetType == java.lang.Float::class.java ->
-//                    str.toFloat()
-//
-//                targetType == BigDecimal::class.java ->
-//                    BigDecimal(str)
-//
-//                targetType == UUID::class.java ->
-//                    UUID.fromString(str)
-//
-//                targetType == LocalDate::class.java ->
-//                    LocalDate.parse(str, DATE_FORMATTER)
-//
-//                targetType == LocalDateTime::class.java ->
-//                    LocalDateTime.parse(
-//                        str.replace(" ", "T"),
-//                        DATETIME_FORMATTER
-//                    )
-//
-//                targetType.isEnum -> {
-//                    val enumClass = targetType as Class<Enum<*>>
-//                    enumClass.enumConstants
-//                        ?.firstOrNull { it.provider.equals(str, ignoreCase = true) }
-//                }
-//
-//                else -> value
-//            }
-//
-//        } catch (e: Exception) {
-//            logger.warn(
-//                "TypeConverter: could not convert '$value' to ${targetType.simpleName}: ${e.message}"
-//            )
-//            null
-//        }
-//    }
-//
-//    private fun convertElementCollection(
-//        value: Any?,
-//        field: Field
-//    ): Any? {
-//
-//        return when {
-//
-//            Map::class.java.isAssignableFrom(field.type) -> {
-//                when (value) {
-//                    is Map<*, *> -> value.toMutableMap()
-//                    else -> mutableMapOf<String, Any?>()
-//                }
-//            }
-//
-//            List::class.java.isAssignableFrom(field.type) -> {
-//                when (value) {
-//                    is Collection<*> -> value.toMutableList()
-//                    else -> mutableListOf(value)
-//                }
-//            }
-//
-//            Set::class.java.isAssignableFrom(field.type) -> {
-//                when (value) {
-//                    is Collection<*> -> value.toMutableSet()
-//                    else -> mutableSetOf(value)
-//                }
-//            }
-//
-//            else -> value
-//        }
-//    }
-//
-//    // ─── Embedded value objects ─────────────────────────────────────────────
-//
-//    private fun convertEmbedded1(entityClass: KClass<*>, entity: Any, field: java.lang.reflect.Field, value: Any?) {
-//        // FormDataCoercer already unwrapped EmbeddedResponse.data → plain map
-//        val dataMap = when (value) {
-//            null -> { field.set(entity, null); return }
-//            is Map<*, *> -> @Suppress("UNCHECKED_CAST") (value as Map<String, Any?>)
-//            else -> { logger.warn("writeEmbedded: unexpected value type ${value::class} for ${field.provider}"); return }
-//        }
-//
-//        // Get or create the embedded instance
-//        val embeddedInstance = field.get(entity)
-//            ?: try { field.type.getDeclaredConstructor().also { it.isAccessible = true }.newInstance() }
-//            catch (e: Exception) { logger.error("Could not instantiate embedded ${field.type.simpleName}: ${e.message}"); return }
-//
-//        // ✅ Recursively write all sub-fields using PropertyWriter logic inline
-//        embeddedInstance::class.java.declaredFields.forEach { embField ->
-//            if (!dataMap.containsKey(embField.provider)) return@forEach
-//            val embValue = dataMap[embField.provider]
-//            try {
-//                embField.isAccessible = true
-//                if (embValue == null) {
-//                    if (!embField.type.isPrimitive) embField.set(embeddedInstance, null)
-//                } else {
-//                    // Re-use TypeConverter for primitive coercion inside embedded objects
-//                    val converted = persistence.jpa.conversion.TypeConverter.convert(embValue, embField.type)
-//                    if (converted != null) embField.set(embeddedInstance, converted)
-//                }
-//            } catch (e: Exception) {
-//                logger.warn("writeEmbedded: could not write sub-field ${embField.provider}: ${e.message}")
-//            }
-//        }
-//
-//        field.set(entity, embeddedInstance)
-//    }
-//
-//    private fun convertEmbedded(
-//        value: Any?,
-//        targetType: Class<*>
-//    ): Any? {
-//
-//        if (value == null) {
-//            return null
-//        }
-//
-//        if (value !is Map<*, *>) {
-//            logger.warn(
-//                "Expected Map for embedded ${targetType.simpleName}, got ${value::class.simpleName}"
-//            )
-//            return null
-//        }
-//
-//        @Suppress("UNCHECKED_CAST")
-//        val data = value as Map<String, Any?>
-//
-//        val instance = try {
-//            targetType.getDeclaredConstructor()
-//                .also { it.isAccessible = true }
-//                .newInstance()
-//        } catch (e: Exception) {
-//            logger.error(
-//                "Could not instantiate embedded ${targetType.simpleName}: ${e.message}"
-//            )
-//            return null
-//        }
-//
-//        targetType.declaredFields.forEach { embField ->
-//
-//            if (!data.containsKey(embField.provider))
-//                return@forEach
-//
-//            embField.isAccessible = true
-//
-//            try {
-//
-//                val converted = convert(
-//                    data[embField.provider],
-//                    embField.type,
-//                    embField
-//                )
-//
-//                if (converted != null || !embField.type.isPrimitive) {
-//                    embField.set(instance, converted)
-//                }
-//
-//            } catch (e: Exception) {
-//                logger.warn(
-//                    "Could not write embedded field '${embField.provider}': ${e.message}"
-//                )
-//            }
-//        }
-//
-//        return instance
-//    }
-//
-//
-//}
-
-
 package persistence.jpa.conversion
 
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 import java.lang.reflect.Field
 import java.lang.reflect.ParameterizedType
 import java.math.BigDecimal
@@ -254,7 +11,8 @@ import java.util.UUID
 
 object TypeConverter {
 
-    private val logger = LoggerFactory.getLogger(TypeConverter::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
     private val DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE
     private val DATETIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
@@ -269,18 +27,18 @@ object TypeConverter {
 
         return try {
             when {
-                // ── Collections (List, Set, @ElementCollection) ──────────────
+                // Collections (List, Set, @ElementCollection)
                 List::class.java.isAssignableFrom(targetType) ||
                         Set::class.java.isAssignableFrom(targetType) ||
                         MutableList::class.java.isAssignableFrom(targetType) ||
                         MutableSet::class.java.isAssignableFrom(targetType) ->
                     convertCollection(value, targetType, field)
 
-                // ── Maps ──────────────────────────────────────────────────────
+                // Maps
                 Map::class.java.isAssignableFrom(targetType) ->
                     convertMap(value)
 
-                // ── Scalar ────────────────────────────────────────────────────
+                // Scalar
                 else -> convertScalar(value, targetType)
             }
         } catch (e: Exception) {
@@ -342,7 +100,7 @@ object TypeConverter {
         }
     }
 
-    // ─── Collection ───────────────────────────────────────────────────────────
+    // Collection
 
     @Suppress("UNCHECKED_CAST")
     fun convertCollection(
@@ -394,23 +152,32 @@ object TypeConverter {
         }
     }
 
-    // ─── Map ──────────────────────────────────────────────────────────────────
-
+    // Map
     @Suppress("UNCHECKED_CAST")
     fun convertMap(value: Any?): Map<*, *>? {
         return when (value) {
             null -> null
+
             is Map<*, *> -> value
+
+            // Row-shape used by the FE for element-collection maps:
+            // [{"key": "...", "value": "..."}]
+            is List<*> -> value.mapNotNull { item ->
+                val row = item as? Map<*, *> ?: return@mapNotNull null
+                if (!row.containsKey("key")) return@mapNotNull null
+                row["key"] to row["value"]
+            }.toMap()
+
             is String -> {
                 val trimmed = value.trim()
                 if (trimmed.startsWith("{")) parseJsonObject(trimmed) else null
             }
+
             else -> null
         }
     }
 
-    // ─── JSON helpers (no Jackson — keeps core dependency-free) ──────────────
-
+    // JSON helpers (no Jackson — keeps core dependency-free)
     private fun parseJsonArray(json: String): List<String> {
         return try {
             json.trim()
@@ -423,25 +190,6 @@ object TypeConverter {
             emptyList()
         }
     }
-
-//    private fun parseJsonObject(json: String): Map<String, String> {
-//        return try {
-//            json.trim()
-//                .removePrefix("{").removeSuffix("}")
-//                .split(",")
-//                .mapNotNull { pair ->
-//                    val parts = pair.split(":", limit = 2)
-//                    if (parts.size != 2) return@mapNotNull null
-//                    val k = parts[0].trim().removeSurrounding("\"")
-//                    val v = parts[1].trim().removeSurrounding("\"")
-//                    k to v
-//                }
-//                .toMap()
-//        } catch (e: Exception) {
-//            logger.warn("TypeConverter: parseJsonObject failed for '{}': {}", json, e.message)
-//            emptyMap()
-//        }
-//    }
 
     private fun parseJsonObject(json: String): MutableMap<String, String> {
         return try {

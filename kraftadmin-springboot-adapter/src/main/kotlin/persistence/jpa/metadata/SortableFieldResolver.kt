@@ -2,8 +2,8 @@ package persistence.jpa.metadata
 
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.*
-import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.time.*
@@ -34,7 +34,8 @@ import kotlin.reflect.jvm.javaField
  */
 object SortableFieldResolver {
 
-    private val logger = LoggerFactory.getLogger(SortableFieldResolver::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     // Strings up to this length are considered sortable
     private const val SORTABLE_STRING_MAX_LENGTH = 255

@@ -1,21 +1,21 @@
 package discovery
 
-import com.kraftadmin.config.JpaDataProviderFactory
+import config.JpaDataProviderFactory
 import com.kraftadmin.spi.AbstractResource
 import com.kraftadmin.spi.DiscoveredEntity
 import com.kraftadmin.utils.files.AdminStorageProvider
-import config.KraftPulseSpringKraftAdminProperties
+import config.KraftAdminProperties
 import discovery.descriptors.action.ActionDescriptorBuilder
 import discovery.descriptors.column.ColumnBuildStrategyFactory
 import discovery.descriptors.column.KraftColumnBuilder
 import events.SpringActionRegistry
 import events.SpringKraftLifecycleService
 import jakarta.persistence.Entity
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.support.TransactionTemplate
 import persistence.jpa.metadata.EntityMetadata
 import persistence.jpa.provider.JpaDataProvider
+import persistence.jpa.validation.PersistenceValidationService
 import security.SecurityProviderChain
 import spi.KraftAdminResource
 
@@ -24,13 +24,10 @@ object ResourceGenerator {
     fun <T : Any> generate(
         discoveredEntity: DiscoveredEntity<T>,
         context: ApplicationContext,
-        properties: KraftPulseSpringKraftAdminProperties,
+        properties: KraftAdminProperties,
     ): KraftAdminResource<T> {
 
-        val logger = LoggerFactory.getLogger(ResourceGenerator::class.java)
 
-       logger.info("inside resource generator and discovered entity: $discoveredEntity")
-        
         val kClass = discoveredEntity.entityClass
         val metadata = EntityMetadata(discoveredEntity.entityClass.kotlin)
 
@@ -74,7 +71,11 @@ object ResourceGenerator {
             }
 
             override val customActions by lazy {
-                actionBuilder.build(adminResource.javaClass.kotlin)
+                if (adminResource == null) {
+                    emptyList()
+                } else {
+                    actionBuilder.build(adminResource::class)
+                }
             }
 
             override val searchableColumns by lazy {
@@ -104,7 +105,7 @@ object ResourceGenerator {
         resource: AbstractResource<T>,
         discoveredEntity: DiscoveredEntity<T>,
         context: ApplicationContext,
-        properties: KraftPulseSpringKraftAdminProperties
+        properties: KraftAdminProperties
     ) {
         val factory = context.getBeanProvider(JpaDataProviderFactory::class.java).ifAvailable
         if (factory != null && discoveredEntity.entityClass.isAnnotationPresent(Entity::class.java)) {
@@ -117,7 +118,8 @@ object ResourceGenerator {
                 entityManager = factory.entityManager,
                 applicationContext = context,
                 paginationProperties = properties.pagination,
-                lifecycleService = context.getBean(SpringKraftLifecycleService::class.java)
+                lifecycleService = context.getBean(SpringKraftLifecycleService::class.java),
+                persistenceValidationService = context.getBean(PersistenceValidationService::class.java)
             )
         }
 

@@ -1,188 +1,35 @@
-//package persistence.jpa.save
-//
-//import jakarta.persistence.*
-//import jakarta.persistence.metamodel.EntityType
-//import org.slf4j.LoggerFactory
-//import persistence.jpa.conversion.FormDataCoercer
-//import persistence.jpa.metadata.EntityMetadata
-//import persistence.jpa.metadata.PropertyResolver
-//import java.util.UUID
-//import kotlin.reflect.KClass
-//import kotlin.reflect.full.memberProperties
-//import kotlin.reflect.jvm.javaField
-//
-///**
-// * Writes JPA relation and embedded fields onto an entity instance.
-// *
-// * Handles: ManyToOne, OneToOne, ManyToMany, OneToMany, Embedded,
-// * and ElementCollection.
-// *
-// * FormDataCoercer has already extracted ids from ObjectResponse maps
-// * and unwrapped EmbeddedResponse.data — so this class only needs to
-// * resolve entity references and set fields, not parse UI shapes.
-// */
-//class RelationshipWriter(
-//    private val entityManager: EntityManager,
-//) {
-//
-//    private val logger = LoggerFactory.getLogger(RelationshipWriter::class.java)
-//
-//
-//    fun write(entityClass:KClass<*>, entity: Any, data: Map<String, Any?>) {
-//        // ✅ Pre-coerce so all values are in their canonical backend shape
-//        val coerced = FormDataCoercer.coerce(data)
-//
-//        entity::class.memberProperties.forEach { prop ->
-//            val field = prop.javaField ?: return@forEach
-//            if (PropertyResolver.shouldSkip(field)) return@forEach
-//            if (!coerced.containsKey(prop.name)) return@forEach
-//
-//            val value = coerced[prop.name]
-//
-//            try {
-//                field.isAccessible = true
-//
-//                when {
-//                    field.isAnnotationPresent(ManyToOne::class.java) ||
-//                            field.isAnnotationPresent(OneToOne::class.java) ->
-//                        writeSingleRelation(entityClass, entity, field, value)
-//
-//                    field.isAnnotationPresent(ManyToMany::class.java) ||
-//                            field.isAnnotationPresent(OneToMany::class.java) ->
-//                        writeCollectionRelation(entityClass, entity, field, value)
-//
-//                }
-//            } catch (e: Exception) {
-//                logger.warn(
-//                    "Could not write relation '${prop.name}' on ${entity::class.simpleName}: ${e.message}"
-//                )
-//            }
-//        }
-//    }
-//
-//    // ─── Single relation ────────────────────────────────────────────────────
-//
-//    private fun writeSingleRelation(entityClass: KClass<*>, entity: Any, field: java.lang.reflect.Field, value: Any?) {
-//        if (value == null) {
-//            field.set(entity, null)
-//            return
-//        }
-//        // After FormDataCoercer, value is a bare id string
-//        val id = value.toString()
-//        val related = entityManager.find(field.type, convertId(entityManager, entityClass, id))
-//        if (related == null) {
-//            logger.warn("writeSingleRelation: ${field.type.simpleName}#$id not found — setting null")
-//        }
-//        field.set(entity, related)
-//    }
-//
-//    // ─── Collection relation ────────────────────────────────────────────────
-//
-//    @Suppress("UNCHECKED_CAST")
-//    private fun writeCollectionRelation(entityClass: KClass<*>, entity: Any, field: java.lang.reflect.Field, value: Any?) {
-//        val ids = when (value) {
-//            null -> emptyList()
-//            is List<*> -> value.mapNotNull { it?.toString() }
-//            is String -> value.split(",").map { it.trim() }.filter { it.isNotBlank() }
-//            else -> listOf(value.toString())
-//        }
-//
-//        val elementType = resolveElementType(field) ?: run {
-//            logger.warn("writeCollectionRelation: could not resolve element type for ${field.name}")
-//            return
-//        }
-//
-//        val related = ids.mapNotNull { id ->
-//            entityManager.find(elementType, convertId(entityManager, entityClass, id)).also {
-//                if (it == null) logger.warn("writeCollectionRelation: $elementType#$id not found")
-//            }
-//        }
-//
-//        val existing = field.get(entity)
-//        when (existing) {
-//            is MutableList<*> -> {
-//                (existing as MutableList<Any>).clear()
-//                existing.addAll(related)
-//            }
-//            is MutableSet<*> -> {
-//                (existing as MutableSet<Any>).clear()
-//                existing.addAll(related)
-//            }
-//            else -> field.set(entity, related.toMutableList())
-//        }
-//    }
-//
-//    // ─── Helpers ────────────────────────────────────────────────────────────
-//
-//    private fun resolveElementType(field: java.lang.reflect.Field): Class<*>? {
-//        val generic = field.genericType as? java.lang.reflect.ParameterizedType ?: return null
-//        return generic.actualTypeArguments.firstOrNull() as? Class<*>
-//    }
-//
-//    /**
-//     * Converts a string from the URL into the actual type required by the JPA Entity
-//     */
-//    fun convertId(entityManager: EntityManager, entityClass: KClass<*>, id: String): Any {
-//        val metamodel1 = entityManager.metamodel
-//
-//        // Defensive check: Verify if the class is actually a managed JPA entity
-//        val entityType: EntityType<*> = try {
-//            metamodel1.entity(entityClass.java)
-//        } catch (e: IllegalArgumentException) {
-//            // Fallback: If it's not a managed entity, we have no choice but
-//            // to return the string and hope the caller handles it,
-//            // or throw a more meaningful custom exception.
-//            return id
-//        }
-//
-//        val idType = entityType.idType.javaType
-//
-//        return try {
-//            when (idType) {
-//                UUID::class.java -> UUID.fromString(id)
-//                Long::class.java, Long::class.javaObjectType -> id.toLong()
-//                Int::class.java, Int::class.javaObjectType -> id.toInt()
-//                else -> id
-//            }
-//        } catch (e: Exception) {
-//            throw IllegalArgumentException("Cannot convert ID '$id' to type ${idType.simpleName} for entity ${entityClass.simpleName}", e)
-//        }
-//    }
-//
-//
-//}
-
 package persistence.jpa.save
 
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.*
 import jakarta.persistence.metamodel.EntityType
-import org.slf4j.LoggerFactory
 import persistence.jpa.conversion.TypeConverter
 import persistence.jpa.metadata.PropertyResolver
+import java.lang.reflect.Field
+import java.lang.reflect.ParameterizedType
 import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaField
 
 /**
- * Writes ONLY JPA relation fields:
- *   ManyToOne, OneToOne → single entity reference
- *   ManyToMany, OneToMany → collection of entity references
- *   Embedded → nested value object
+ * Writes JPA association fields:
  *
- * ElementCollection is NOT handled here — PropertyWriter + TypeConverter own it.
+ *  • ManyToOne / OneToOne      -> single entity reference
+ *  • OneToMany / ManyToMany    -> collection of entity references
+ *  • ElementCollection         -> collection of scalar or embeddable values
+ *  • Embedded                  -> nested value object
+ *
+ * PropertyWriter remains responsible only for scalar properties.
  */
 class RelationshipWriter(private val entityManager: jakarta.persistence.EntityManager) {
 
-    private val logger = LoggerFactory.getLogger(RelationshipWriter::class.java)
 
-    fun write(entityClass:KClass<*>, entity: Any, coerced: Map<String, Any?>) {
-        writeCoerced(entityClass, entity, coerced) // data already coerced by EntitySaver
-    }
+    private val logger = KraftAdminLogging.logger(javaClass)
 
-//    fun writeCoerced(entity: KClass, coerced: Map<String, Any?>) {
-        fun writeCoerced(entityClass:KClass<*>, entity: Any, coerced: Map<String, Any?>) {
-         entity::class.memberProperties.forEach { prop ->
+
+    fun writeCoerced(entityClass: KClass<*>, entity: Any, coerced: Map<String, Any?>) {
+        entity::class.memberProperties.forEach { prop ->
             val field = prop.javaField ?: return@forEach
             if (PropertyResolver.shouldSkip(field)) return@forEach
             if (!coerced.containsKey(prop.name)) return@forEach
@@ -199,14 +46,13 @@ class RelationshipWriter(private val entityManager: jakarta.persistence.EntityMa
 
                     field.isAnnotationPresent(ManyToMany::class.java) ||
                             field.isAnnotationPresent(OneToMany::class.java) ->
-                        writeCollectionRelation(entityClass,entity, field, value)
+                        writeCollectionRelation(entityClass, entity, field, value)
 
-//                    field.isAnnotationPresent(Embedded::class.java) ->
-//                        writeEmbedded(entity, field, value)
+                    field.isAnnotationPresent(ElementCollection::class.java) ->
+                        writeElementCollection(entity, field, value)
 
-                    field.isAnnotationPresent(Embedded::class.java) || field.isAnnotationPresent(Embeddable::class.java) ->
+                    field.isAnnotationPresent(Embedded::class.java) ->
                         writeEmbedded(entityClass, entity, field, value)
-
                 }
             } catch (e: Exception) {
                 logger.warn(
@@ -217,12 +63,213 @@ class RelationshipWriter(private val entityManager: jakarta.persistence.EntityMa
         }
     }
 
-    // ─── Single relation ──────────────────────────────────────────────────────
+    // ElementCollection dispatch
+
+    private fun writeElementCollection(
+        entity: Any,
+        field: Field,
+        value: Any?
+    ) {
+        when {
+            Map::class.java.isAssignableFrom(field.type) ->
+                writeElementCollectionMap(entity, field, value)
+
+            Collection::class.java.isAssignableFrom(field.type) ->
+                writeElementCollectionCollection(entity, field, value)
+
+            else ->
+                logger.warn(
+                    "Unsupported @ElementCollection type {}",
+                    field.type.name
+                )
+        }
+    }
+
+    //  List / Set element collections
+
+    @Suppress("UNCHECKED_CAST")
+    private fun writeElementCollectionCollection(
+        entity: Any,
+        field: Field,
+        value: Any?
+    ) {
+        val elementType = resolveCollectionElementType(field) ?: run {
+            logger.warn("writeElementCollectionCollection: cannot resolve element type for '{}'", field.name)
+            return
+        }
+
+        val converted = when (value) {
+            null -> emptyList()
+
+            is Collection<*> ->
+                value.mapNotNull { convertElement(elementType, it) }
+
+            else ->
+                listOfNotNull(convertElement(elementType, value))
+        }
+
+        when (val existing = field.get(entity)) {
+
+            is MutableList<*> -> {
+                val list = existing as MutableList<Any?>
+                list.clear()
+                list.addAll(converted)
+            }
+
+            is MutableSet<*> -> {
+                val set = existing as MutableSet<Any?>
+                set.clear()
+                set.addAll(converted)
+            }
+
+            else ->
+                // Fall back to a mutable list if no existing collection proxy is present
+                // (e.g. transient/new entity where Hibernate hasn't wired the proxy yet).
+                field.set(entity, converted.toMutableList())
+        }
+
+        logger.debug("wrote element collection '{}' → {} items", field.name, converted.size)
+    }
+
+    // Map element collections
+
+    @Suppress("UNCHECKED_CAST")
+    private fun writeElementCollectionMap(
+        entity: Any,
+        field: Field,
+        value: Any?
+    ) {
+        val (keyType, valueType) = resolveMapTypes(field) ?: run {
+            logger.warn("writeElementCollectionMap: cannot resolve key/value types for '{}'", field.name)
+            return
+        }
+
+        val rawEntries: List<Pair<Any?, Any?>> = when (value) {
+            null -> emptyList()
+            is Map<*, *> -> value.entries.map { it.key to it.value }
+            is List<*> -> value.mapNotNull { item ->
+                val row = item as? Map<*, *> ?: return@mapNotNull null
+                if (!row.containsKey("key")) return@mapNotNull null
+                row["key"] to row["value"]
+            }
+            else -> {
+                logger.warn(
+                    "writeElementCollectionMap: expected Map or List<{{key,value}}> for '{}', got {}",
+                    field.name, value::class.simpleName
+                )
+                return
+            }
+        }
+
+        val converted: Map<Any, Any?> = rawEntries
+            .mapNotNull { (rawKey, rawValue) ->
+                val k = convertElement(keyType, rawKey) ?: return@mapNotNull null
+                k to convertElement(valueType, rawValue)
+            }
+            .toMap()
+
+        when (val existing = field.get(entity)) {
+            is MutableMap<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                val map = existing as MutableMap<Any, Any?>
+                map.clear()
+                map.putAll(converted)
+            }
+            else -> field.set(entity, LinkedHashMap(converted))
+        }
+
+        logger.debug("wrote element collection map '{}' → {} entries", field.name, converted.size)
+    }
+
+    // Shared scalar/embeddable conversion
+
+    private fun convertElement(
+        targetType: Class<*>,
+        value: Any?
+    ): Any? {
+
+        if (value == null)
+            return null
+
+        if (targetType.isAnnotationPresent(Embeddable::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            val data = value as? Map<String, Any?> ?: run {
+                logger.warn(
+                    "convertElement: expected object for embeddable {}, got {}",
+                    targetType.simpleName, value::class.simpleName
+                )
+                return null
+            }
+            return createEmbeddedInstance(targetType, data)
+        }
+
+        return TypeConverter.convertScalar(value, targetType)
+    }
+
+    private fun resolveCollectionElementType(field: Field): Class<*>? {
+        val generic = field.genericType as? ParameterizedType ?: return null
+        return generic.actualTypeArguments.getOrNull(0) as? Class<*>
+    }
+
+    private fun resolveMapTypes(field: Field): Pair<Class<*>, Class<*>>? {
+        val generic = field.genericType as? ParameterizedType ?: return null
+        val key = generic.actualTypeArguments.getOrNull(0) as? Class<*> ?: return null
+        val value = generic.actualTypeArguments.getOrNull(1) as? Class<*> ?: return null
+        return key to value
+    }
+
+    private fun createEmbeddedInstance(
+        type: Class<*>,
+        data: Map<String, Any?>
+    ): Any {
+        val instance = type.getDeclaredConstructor()
+            .also { it.isAccessible = true }
+            .newInstance()
+
+        type.declaredFields.forEach { embField ->
+            if (!data.containsKey(embField.name)) return@forEach
+
+            embField.isAccessible = true
+
+            val raw = data[embField.name]
+
+            val converted = if (
+                embField.type.isAnnotationPresent(
+                    Embeddable::class.java
+                )
+            ) {
+                @Suppress("UNCHECKED_CAST")
+                (raw as? Map<String, Any?>)?.let {
+                    createEmbeddedInstance(
+                        embField.type,
+                        it
+                    )
+                }
+            } else {
+                TypeConverter.convertScalar(
+                    raw,
+                    embField.type
+                )
+            }
+
+            if (converted != null || raw == null) {
+                embField.set(
+                    instance,
+                    converted
+                )
+            }
+        }
+
+        return instance
+    }
+
+
+    // Single relation
 
     private fun writeSingleRelation(
-        entityClass:KClass<*>,
+        entityClass: KClass<*>,
         entity: Any,
-        field: java.lang.reflect.Field,
+        field: Field,
         value: Any?
     ) {
         if (value == null) {
@@ -240,7 +287,6 @@ class RelationshipWriter(private val entityManager: jakarta.persistence.EntityMa
         val coercedId = coerceId(entityManager, entityClass, id)
         val related = entityManager.find(field.type, coercedId)
 
-//        val related = entityManager.find(field.type, coerceId(id, field.type))
         if (related == null) {
             logger.warn(
                 "writeSingleRelation: {}#{} not found — setting null for '{}'",
@@ -248,16 +294,15 @@ class RelationshipWriter(private val entityManager: jakarta.persistence.EntityMa
             )
         }
         field.set(entity, related)
-        logger.debug("wrote single relation '{}' → {}#{}", field.name, field.type.simpleName, id)
     }
 
-    // ─── Collection relation ──────────────────────────────────────────────────
+    // Collection relation
 
     @Suppress("UNCHECKED_CAST")
     private fun writeCollectionRelation(
-        entityClass:KClass<*>,
+        entityClass: KClass<*>,
         entity: Any,
-        field: java.lang.reflect.Field,
+        field: Field,
         value: Any?
     ) {
         val ids: List<String> = when (value) {
@@ -267,7 +312,7 @@ class RelationshipWriter(private val entityManager: jakarta.persistence.EntityMa
             else -> listOf(value.toString())
         }
 
-        val elementType = resolveElementType(field) ?: run {
+        val elementType = resolveCollectionElementType(field) ?: run {
             logger.warn("writeCollectionRelation: cannot resolve element type for '{}'", field.name)
             return
         }
@@ -295,87 +340,57 @@ class RelationshipWriter(private val entityManager: jakarta.persistence.EntityMa
             else -> field.set(entity, ArrayList(related))
         }
 
-        logger.debug("wrote collection relation '{}' → {} items", field.name, related.size)
     }
 
-    // ─── Embedded value object ────────────────────────────────────────────────
-
+    //  Embedded value object
     private fun writeEmbedded(
-        entityClass:KClass<*>,
+        entityClass: KClass<*>,
         entity: Any,
-        field: java.lang.reflect.Field,
+        field: Field,
         value: Any?
     ) {
-        val dataMap: Map<String, Any?> = when (value) {
-            null -> { field.set(entity, null); return }
-            is Map<*, *> -> @Suppress("UNCHECKED_CAST") (value as Map<String, Any?>)
-            else -> {
-                logger.warn("writeEmbedded: unexpected type {} for '{}'", value::class.simpleName, field.name)
-                return
-            }
+        if (value == null) {
+            field.set(entity, null)
+            return
         }
 
-        val embeddedInstance = field.get(entity)
-            ?: try {
-                field.type.getDeclaredConstructor()
-                    .also { it.isAccessible = true }
-                    .newInstance()
-            } catch (e: Exception) {
-                logger.error("writeEmbedded: cannot instantiate {}: {}", field.type.simpleName, e.message)
+        val dataMap = value as? Map<String, Any?>
+            ?: run {
+                logger.warn(
+                    "writeEmbedded: expected object for '{}', got {}",
+                    field.name,
+                    value::class.simpleName
+                )
                 return
             }
 
-        embeddedInstance.javaClass.declaredFields.forEach { embField ->
-            if (!dataMap.containsKey(embField.name)) return@forEach
-            val embValue = dataMap[embField.name] ?: return@forEach
-            try {
-                embField.isAccessible = true
-                val converted = TypeConverter.convertScalar(embValue, embField.type)
-                if (converted != null) embField.set(embeddedInstance, converted)
-            } catch (e: Exception) {
-                logger.debug("writeEmbedded: field '{}': {}", embField.name, e.message)
-            }
-        }
+        val embeddedInstance = createEmbeddedInstance(
+            field.type,
+            dataMap
+        )
 
         field.set(entity, embeddedInstance)
-        logger.debug("wrote embedded '{}' with keys={}", field.name, dataMap.keys)
+
+        logger.debug(
+            "wrote embedded '{}' with keys={}",
+            field.name,
+            dataMap.keys
+        )
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    // Helpers
 
-    private fun resolveElementType(field: java.lang.reflect.Field): Class<*>? {
-        val generic = field.genericType as? java.lang.reflect.ParameterizedType ?: return null
-        return generic.actualTypeArguments.firstOrNull() as? Class<*>
-    }
-
-    private fun coerceId1(id: String, targetType: Class<*>): Any {
-        return when {
-            targetType == Long::class.java ||
-                    targetType == java.lang.Long::class.java -> id.toLong()
-
-            targetType == Int::class.java ||
-                    targetType == java.lang.Integer::class.java -> id.toInt()
-
-            targetType == java.util.UUID::class.java ->
-                java.util.UUID.fromString(id)
-
-            else -> id
-        }
-    }
-
-        /**
-     * Converts a string from the URL into the actual type required by the JPA Entity
+    /**
+     * Converts a string from the URL/payload into the actual type required by the JPA entity's ID.
      */
     fun coerceId(entityManager: EntityManager, entityClass: KClass<*>, id: String): Any {
-        val metamodel1 = entityManager.metamodel
+        val metamodel = entityManager.metamodel
 
-        // Defensive check: Verify if the class is actually a managed JPA entity
+        // Defensive check: verify the class is actually a managed JPA entity
         val entityType: EntityType<*> = try {
-            metamodel1.entity(entityClass.java)
+            metamodel.entity(entityClass.java)
         } catch (e: IllegalArgumentException) {
-            // Fallback: If it's not a managed entity, we have no choice but
-            // to return the string and hope the caller handles it,
-            // or throw a more meaningful custom exception.
+            // Fallback: if it's not a managed entity, return the raw string
             return id
         }
 
@@ -389,7 +404,9 @@ class RelationshipWriter(private val entityManager: jakarta.persistence.EntityMa
                 else -> id
             }
         } catch (e: Exception) {
-            throw IllegalArgumentException("Cannot convert ID '$id' to type ${idType.simpleName} for entity ${entityClass.simpleName}", e)
+            throw IllegalArgumentException(
+                "Cannot convert ID '$id' to type ${idType.simpleName} for entity ${entityClass.simpleName}", e
+            )
         }
     }
 }

@@ -1,8 +1,9 @@
 package com.kraftadmin.domain.event
 
+import annotations.RichTextConfig
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.annotations.KraftAdminLookup
-import com.kraftadmin.annotations.RichTextConfig
+import com.kraftadmin.annotations.KraftAdminResource
 import com.kraftadmin.annotations.ToolbarProfile
 import com.kraftadmin.domain.base.BaseEntity
 import com.kraftadmin.enums.FormInputType
@@ -13,6 +14,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 @Entity
+@KraftAdminResource(label = "Event Resource")
 class Event(
 
     @field:NotEmpty(message = "Event title is required")

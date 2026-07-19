@@ -5,7 +5,7 @@ import actions.KraftActionResponse
 import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 
@@ -17,7 +17,9 @@ class SpringKraftCustomActionService(
     private val publisher: SpringKraftEventPublisher,
 ) {
 
-    private val logger = LoggerFactory.getLogger(SpringKraftCustomActionService::class.java)
+
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     fun execute(resourceName: String, id: String, actionName: String, input: Any?): KraftActionResponse? {
         val handler = actionRegistry.getAction(actionName)
@@ -32,7 +34,6 @@ class SpringKraftCustomActionService(
         val entity = dataProvider.findById(id) // This returns the actual entity
             ?: throw IllegalArgumentException("Entity $id not found")
 
-        logger.info("entity: $entity")
 
         val context = KraftAdminContextHolder.actionContext(
             resourceName,
@@ -41,8 +42,6 @@ class SpringKraftCustomActionService(
             convertedInput
         )
 
-
-        logger.info("context $context")
 
         publisher.publish(
             KraftAdminEvent.BeforeAction(

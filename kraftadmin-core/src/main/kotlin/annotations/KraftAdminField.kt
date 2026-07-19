@@ -8,7 +8,7 @@ import com.kraftadmin.enums.FormInputType
  * Apply this to fields within a @KraftAdminResource class to override the
  * engine's default inference logic.
  *
- * @property label The display name for table headers and form labels.
+ * @property label The display provider for table headers and form labels.
  * @property inputType The UI component type used in forms. When [FormInputType.UNSET],
  * the engine infers the type from the property's JVM class.
  * @property showInTable Forces this field to be displayed in the resource list table.
@@ -30,7 +30,11 @@ import com.kraftadmin.enums.FormInputType
  * @property wysiwygConfig Configuration for WYSIWYG editors.
  * @property fileConfig Configuration for file upload fields.
  */
-@Target(AnnotationTarget.FIELD)
+//@Target(AnnotationTarget.FIELD)
+@Target(
+    AnnotationTarget.FIELD,
+    AnnotationTarget.PROPERTY
+)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class KraftAdminField(
     val label: String = "",

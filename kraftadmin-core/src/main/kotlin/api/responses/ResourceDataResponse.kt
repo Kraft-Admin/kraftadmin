@@ -14,4 +14,3 @@ data class PagedResponse<T>(
     val pageSize: Int,
     val totalPages: Int
 )
-

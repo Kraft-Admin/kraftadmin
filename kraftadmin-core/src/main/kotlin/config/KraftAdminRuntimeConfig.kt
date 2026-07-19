@@ -1,6 +1,6 @@
 package com.kraftadmin.config
 
-import com.kraftadmin.spi.KraftAdminResource
+import spi.KraftAdminResource
 
 class KraftAdminRuntimeConfig {
     lateinit var config: KraftAdminConfig

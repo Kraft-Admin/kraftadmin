@@ -62,28 +62,4 @@ enum class ToolbarProfile(
     );
 }
 
-/**
- * Nested configuration layout specifically targeting fields marked as WYSIWYG rich text inputs.
- * Allows you to tune the tool strip presence and fallback text behaviors during view rendering steps.
- *
- * Usage example:
- * ```kotlin
- * @KraftAdminField(
- * inputType = FormInputType.WYSIWYG,
- * wysiwygConfig = RichTextConfig(
- * toolbarProfile = ToolbarProfile.STANDARD,
- * placeholder = "Compose an extensive, formatted article introduction..."
- * )
- * )
- * val articleBody: String
- * ```
- *
- * @property toolbarProfile The predefined operational toolbar profile determining which formatting controls are displayed to the user.
- * @property placeholder The informational ghost string shown when the input surface remains empty. If blank, falls back to the parent component default text.
- */
-@Target(AnnotationTarget.TYPE)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class RichTextConfig(
-    val toolbarProfile: ToolbarProfile = ToolbarProfile.MINIMAL,
-    val placeholder: String = ""
-)
+

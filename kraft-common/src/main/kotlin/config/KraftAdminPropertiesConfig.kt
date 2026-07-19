@@ -16,6 +16,7 @@ interface KraftAdminPropertiesConfig {
     val features: FeatureConfig   // Toggle "Dangerous" buttons globally
     val localeConfig: LocaleConfig
     val telemetryConfig: TelemetryConfig
+    val loggingConfig: LoggingConfig
 }
 
 interface ThemeConfig {
@@ -41,7 +42,7 @@ interface SecurityConfig {
     /** * Global roles allowed to access the Admin UI.
      * If empty, any authenticated user can enter.
      */
-    val requiredRoles: Set<String>
+    val requiredRoles: List<String>
 
     /** * Specific path-to-role mappings for granular control.
      * Example: "/api/resources/User" -> setOf("ROLE_SUPER_ADMIN")
@@ -67,6 +68,10 @@ interface TelemetryConfig {
     var provider: TelemetryProvider
     val apiKey: String?
     val secretKey: String?
+}
+
+interface LoggingConfig {
+    var enabled: Boolean
 }
 
 enum class TelemetryProvider(

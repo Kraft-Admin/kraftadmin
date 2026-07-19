@@ -1,12 +1,12 @@
 package security
 
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.servlet.Filter
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.slf4j.LoggerFactory
 
 class AdminSecurityFilter(
     private val chain: SecurityProviderChain,
@@ -14,7 +14,7 @@ class AdminSecurityFilter(
     private val securityConfig: AdminSecurityConfig,
 ) : Filter {
 
-    private val logger = LoggerFactory.getLogger(AdminSecurityFilter::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
 
     private val safeMethods = setOf("GET", "HEAD", "OPTIONS")
 
@@ -27,8 +27,6 @@ class AdminSecurityFilter(
         val httpResponse = response as HttpServletResponse
         val uri = httpRequest.requestURI
         val method = httpRequest.method.uppercase()
-
-        logger.debug("AdminSecurityFilter: {} {}", method, uri)
 
         val isAuthApi = uri.startsWith("/admin/api/auth/")
         val isStaticAsset = uri.contains("/admin/assets/") ||
@@ -54,25 +52,16 @@ class AdminSecurityFilter(
             return
         }
 
-        logger.debug("AdminSecurityFilter: authenticated user={} roles={}", principal.username, principal.roles)
 
         val globalRoles = securityConfig.requiredRoles
 
         if (globalRoles.isEmpty()) {
-            logger.error(
-                "KraftAdmin security misconfiguration: requiredRoles is empty, denying access to '{}'.",
-                uri
-            )
             writeForbidden(httpResponse, "Access control misconfigured.")
             return
         }
 
         val hasGlobalAccess = principal.roles.any { it in globalRoles }
         if (!hasGlobalAccess) {
-            logger.warn(
-                "User '{}' has roles {}, but '{}' requires one of {}",
-                principal.username, principal.roles, uri, globalRoles
-            )
             writeForbidden(httpResponse, "You do not have the required permissions.")
             return
         }
@@ -81,10 +70,6 @@ class AdminSecurityFilter(
         if (routeRoles != null && method !in safeMethods) {
             val hasRouteAccess = principal.roles.any { it in routeRoles }
             if (!hasRouteAccess) {
-                logger.warn(
-                    "User '{}' has roles {}, but modifying '{}' requires one of {}",
-                    principal.username, principal.roles, uri, routeRoles
-                )
                 writeForbidden(httpResponse, "You have read-only access to this resource.")
                 return
             }
@@ -121,8 +106,6 @@ class AdminSecurityFilter(
         request: HttpServletRequest,
         response: HttpServletResponse
     ) {
-        logger.debug("Unauthenticated request: {} {}", request.method, request.requestURI)
-
         val uri = request.requestURI
         val acceptsHtml = request.getHeader("Accept")?.contains("text/html") == true
         val isApiRequest = uri.contains("/api/")
@@ -140,9 +123,6 @@ class AdminSecurityFilter(
         }
     }
 
-    private fun buildRedirectUrl(request: HttpServletRequest): String {
-        return loginPagePath
-    }
 
     companion object {
         const val PRINCIPAL_ATTRIBUTE = "kraftadmin.principal"

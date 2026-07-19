@@ -1,12 +1,15 @@
 package persistence.jpa.fetch
 
-import api.utils.ObjectResponse
-import api.utils.ResourceRow
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.*
-import org.slf4j.LoggerFactory
 import persistence.jpa.metadata.AssociationResolver
+import persistence.jpa.metadata.EntityMetadata
 import persistence.jpa.metadata.PropertyResolver
 import persistence.jpa.util.HibernateUtil
+import java.lang.reflect.Field
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.WildcardType
+import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaField
 
@@ -22,7 +25,8 @@ import kotlin.reflect.jvm.javaField
  */
 class RelatedResourceFetcher(private val limit: Int = 10) {
 
-    private val logger = LoggerFactory.getLogger(RelatedResourceFetcher::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     data class RelatedItem(
         val id: String,
@@ -32,10 +36,13 @@ class RelatedResourceFetcher(private val limit: Int = 10) {
 
     data class RelatedCollection(
         val fieldName: String,
-        val entityType: String,         // simple class name — UI uses this for navigation
+        val entityType: String,
         val items: List<RelatedItem>,
-        val totalInMemory: Int,         // how many were actually loaded (may be > limit)
-        val limited: Boolean            // true if we cut the list at [limit]
+        val totalInMemory: Int,
+        val limited: Boolean,
+        val lookupKey: String,
+        val displayField: String,
+        val searchableFields: List<String>
     )
 
     /**
@@ -49,43 +56,82 @@ class RelatedResourceFetcher(private val limit: Int = 10) {
             val field = prop.javaField ?: return@forEach
             if (PropertyResolver.shouldSkip(field)) return@forEach
 
-            val isSingle = field.isAnnotationPresent(ManyToOne::class.java) ||
-                    field.isAnnotationPresent(OneToOne::class.java)
-            val isCollection = field.isAnnotationPresent(OneToMany::class.java) ||
+            // 1. Resolve the related class
+            val relatedKClass = resolveRelatedClass(field) ?: return@forEach
+
+            // 2. THE FINAL FIX: Check if it's actually an Entity
+            val isEntity = relatedKClass.java.isAnnotationPresent(Entity::class.java)
+
+
+            // If it's NOT an entity (like String, Integer, etc.), ignore it completely
+            if (!isEntity) return@forEach
+
+            // 3. Determine if it's a relation (ManyToOne, OneToMany, etc.)
+            // This ensures we don't accidentally process non-relation fields
+            val isRelation = field.isAnnotationPresent(ManyToOne::class.java) ||
+                    field.isAnnotationPresent(OneToOne::class.java) ||
+                    field.isAnnotationPresent(OneToMany::class.java) ||
                     field.isAnnotationPresent(ManyToMany::class.java)
 
-            if (!isSingle && !isCollection) return@forEach
+            if (!isRelation) return@forEach
 
+            // 4. Prepare the items
             val rawValue = try {
                 field.isAccessible = true
                 field.get(entity)
-            } catch (e: Exception) { return@forEach }
+            } catch (e: Exception) { null }
 
-            val proxyValue = HibernateUtil.unproxy(rawValue) ?: return@forEach
-
-            // Normalize: If it's not a collection, wrap it in a list
+            val proxyValue = HibernateUtil.unproxy(rawValue)
             val itemsList = when (proxyValue) {
-                is Collection<*> -> proxyValue.toList()
+                is Collection<*> -> proxyValue.filterNotNull()
+                null -> emptyList()
                 else -> listOf(proxyValue)
             }
 
-            if (itemsList.isEmpty()) return@forEach
-
             val sliced = itemsList.take(limit)
-            val relatedItems = sliced.mapNotNull { mapToRelatedItem(it!!) }
-
-            val entityTypeName = sliced.firstOrNull()
-                ?.let { HibernateUtil.unproxy(it)?.javaClass?.simpleName } ?: field.name
+            val relatedItems = sliced.mapNotNull { mapToRelatedItem(it) }
 
             result[prop.name] = RelatedCollection(
                 fieldName = prop.name,
-                entityType = entityTypeName,
+                entityType = relatedKClass.simpleName ?: "Unknown",
                 items = relatedItems,
                 totalInMemory = itemsList.size,
-                limited = itemsList.size > limit
+                limited = itemsList.size > limit,
+                lookupKey = EntityMetadata(relatedKClass).idField,
+                displayField = EntityMetadata(relatedKClass).displayField,
+                searchableFields = EntityMetadata(relatedKClass).searchableFields
             )
+            
         }
         return result
+    }
+
+    /**
+     * Extracts the generic class from a Field (e.g., List<BlogPost> -> BlogPost)
+     */
+    private fun resolveRelatedClass(field: Field): KClass<*>? {
+        // Single-valued relation
+        if (!Collection::class.java.isAssignableFrom(field.type)) {
+            return field.type.kotlin
+        }
+
+        val parameterized = field.genericType as? ParameterizedType
+            ?: return null
+
+        val argument = parameterized.actualTypeArguments.firstOrNull()
+            ?: return null
+
+        return when (argument) {
+            is Class<*> -> argument.kotlin
+
+            is ParameterizedType ->
+                (argument.rawType as? Class<*>)?.kotlin
+
+            is WildcardType ->
+                (argument.upperBounds.firstOrNull() as? Class<*>)?.kotlin
+
+            else -> null
+        }
     }
 
     private fun mapToRelatedItem(item: Any): RelatedItem? {
@@ -106,8 +152,6 @@ class RelatedResourceFetcher(private val limit: Int = 10) {
                 field.isAnnotationPresent(OneToOne::class.java) ||
                 field.isAnnotationPresent(OneToMany::class.java) ||
                 field.isAnnotationPresent(ManyToMany::class.java
-//                field.isAnnotationPresent(Embedded::class.java) ||
-//                field.isAnnotationPresent(ElementCollection::class.java
                 )
             ) return@forEach
 
@@ -127,4 +171,6 @@ class RelatedResourceFetcher(private val limit: Int = 10) {
 
         return RelatedItem(id = id, displayLabel = label, values = values)
     }
+
+
 }

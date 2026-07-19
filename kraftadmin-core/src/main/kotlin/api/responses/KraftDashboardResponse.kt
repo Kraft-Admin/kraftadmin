@@ -11,7 +11,7 @@ data class KraftDashboardResponse(
 data class DashboardStat(
     val label: String,
     val value: String,
-    val icon: String, // SVG path or Lucide name
+    val icon: String, // SVG path or Lucide provider
     val trend: String? = null // e.g., "+12%"
 )
 

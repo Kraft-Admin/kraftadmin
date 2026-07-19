@@ -5,10 +5,7 @@ import persistence.error.PersistenceErrorDetails
 import jakarta.persistence.Column
 import jakarta.persistence.EntityManager
 import jakarta.persistence.Table
-import org.slf4j.LoggerFactory
-import persistence.error.PersistenceError
 import persistence.error.PersistenceException
-import persistence.jpa.metadata.EntityMetadata
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
@@ -21,15 +18,12 @@ import kotlin.reflect.jvm.isAccessible
  */
 class UniqueConstraintValidator : PersistenceValidator {
 
-    private val log = LoggerFactory.getLogger(UniqueConstraintValidator::class.java)
-
     override fun validate(context: ValidationContext<*>) {
 
         val entity = context.entity
         val entityClass = context.entityClass
         val entityManager = context.entityManager
 
-        log.info("Validate Unique Constraint: {}, {}", entityClass.simpleName, entityClass)
 
         entityClass.memberProperties
             .filterIsInstance<KProperty1<Any, *>>()
@@ -55,8 +49,6 @@ class UniqueConstraintValidator : PersistenceValidator {
 
         // Reserved for @Table(uniqueConstraints = ...)
         entityClass.findAnnotation<Table>()
-
-        log.info("Validate Unique Constraint done: {}, {}", entityClass.simpleName, entityClass)
 
     }
 

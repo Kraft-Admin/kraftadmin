@@ -1,10 +1,7 @@
 package discovery
 
-import com.kraftadmin.discovery.EntityDiscoveryService
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
 import com.kraftadmin.spi.EntityDiscoverer
+import com.kraftadmin.spi.EntityDiscoveryService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -23,11 +20,11 @@ class EntityDiscoveryServiceTest {
     fun `discoverAll should aggregate unique entities from all discoverers`() {
         // Arrange
         val discoverer1 = mockk<EntityDiscoverer> {
-            every { name } returns "JpaDiscoverer"
+            every { provider } returns "JpaDiscoverer"
             every { discover() } returns setOf(MockUserEntity::class.java, MockPostEntity::class.java)
         }
         val discoverer2 = mockk<EntityDiscoverer> {
-            every { name } returns "MongoDiscoverer"
+            every { provider } returns "MongoDiscoverer"
             every { discover() } returns setOf(MockPostEntity::class.java, MockTenantEntity::class.java)
         }
 
@@ -57,11 +54,11 @@ class EntityDiscoveryServiceTest {
     fun `discoverAll should continue processing if a discoverer throws an exception`() {
         // Arrange
         val failingDiscoverer = mockk<EntityDiscoverer> {
-            every { name } returns "BrokenDiscoverer"
+            every { provider } returns "BrokenDiscoverer"
             every { discover() } throws RuntimeException("Database connection failure")
         }
         val healthyDiscoverer = mockk<EntityDiscoverer> {
-            every { name } returns "HealthyDiscoverer"
+            every { provider } returns "HealthyDiscoverer"
             every { discover() } returns setOf(MockUserEntity::class.java)
         }
 
@@ -81,7 +78,7 @@ class EntityDiscoveryServiceTest {
     fun `discover override should execute identical collection aggregation logic`() {
         // Arrange
         val discoverer = mockk<EntityDiscoverer> {
-            every { name } returns "CustomDiscoverer"
+            every { provider } returns "CustomDiscoverer"
             every { discover() } returns setOf(MockTenantEntity::class.java)
         }
         val discoveryService = EntityDiscoveryService(listOf(discoverer))
@@ -90,7 +87,7 @@ class EntityDiscoveryServiceTest {
         val result = discoveryService.discover()
 
         // Assert
-        assertEquals("Springboot discovery", discoveryService.name)
+        assertEquals("Springboot discovery", discoveryService.provider)
         assertEquals(1, result.size)
         assertTrue(result.contains(MockTenantEntity::class.java))
     }

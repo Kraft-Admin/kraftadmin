@@ -1,7 +1,7 @@
 package persistence.jpa.metadata
 
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.Transient
-import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
@@ -14,7 +14,8 @@ import kotlin.reflect.jvm.javaField
  */
 object PropertyResolver {
 
-    private val logger = LoggerFactory.getLogger(PropertyResolver::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     private val SIMPLE_TYPES: Set<KClass<*>> = setOf(
         String::class, Boolean::class, Byte::class, Short::class,

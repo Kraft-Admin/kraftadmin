@@ -1,10 +1,10 @@
 package persistence.jpa.query
 
 import com.kraftadmin.query.KraftFilter
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.Predicate
 import jakarta.persistence.criteria.Root
-import org.slf4j.LoggerFactory
 
 /**
  * Builds JPA criteria Predicates from filter descriptors.
@@ -13,7 +13,8 @@ import org.slf4j.LoggerFactory
  */
 object PredicateBuilder {
 
-    private val logger = LoggerFactory.getLogger(PredicateBuilder::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     sealed class Filter {
         data class Equals(val field: String, val value: Any) : Filter()

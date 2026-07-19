@@ -1,5 +1,6 @@
 package com.kraftadmin.utils.files
 
+import com.kraftadmin.logging.KraftAdminLogging
 import org.slf4j.LoggerFactory
 
 class S3Adapter(
@@ -7,9 +8,9 @@ class S3Adapter(
     private val bucketName: String
 ) : AdminStorageProvider {
 
-    private val logger = LoggerFactory.getLogger(S3Adapter::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
 
-    override fun upload(bytes: ByteArray, fileName: String, context: String): String {
+    override fun upload(bytes: ByteArray, fileName: String, context: String, baseUrl: String): String {
         val extension = fileName.substringAfterLast(".", "bin")
         val uniqueName = "$context/${java.util.UUID.randomUUID()}.$extension"
 

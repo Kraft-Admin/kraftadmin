@@ -1,6 +1,6 @@
 package config
 
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -24,15 +24,36 @@ class KraftAdminSpringSecurityConfig(
     private val env: Environment,
 ) {
 
-    private val log = LoggerFactory.getLogger(KraftAdminSpringSecurityConfig::class.java)
+    private val log = KraftAdminLogging.logger(javaClass)
+
 
     @Bean
     @ConditionalOnMissingBean
-    fun adminSecurityConfig(): AdminSecurityConfig =
-        AdminSecurityConfig(
+    fun adminSecurityConfig(): AdminSecurityConfig {
+        val configuredRoles = properties.security.requiredRoles
+
+        require(configuredRoles.isNotEmpty()) {
+            "kraftadmin.security.required-roles is not configured. " +
+                    "This application must explicitly define which role(s) grant access " +
+                    "to the admin panel — there is no safe default. " +
+                    "Set e.g. kraftadmin.security.required-roles[0]=ROLE_ADMIN in your configuration."
+        }
+
+        val basePath = properties.basePath.removeSuffix("/")
+
+        val normalizedProtectedRoutes = properties.security.protectedRoutes
+            .mapKeys { (pattern, _) ->
+                if (pattern.startsWith(basePath)) pattern
+                else "$basePath${if (pattern.startsWith("/")) "" else "/"}$pattern"
+            }
+
+        return AdminSecurityConfig(
+            requiredRoles = configuredRoles,
+            protectedRoutes = normalizedProtectedRoutes,
             frameworkAdapterFactory = { SpringSecurityAdapter() },
             frameworkSecurityActiveCheck = { isSpringSecurityActive() },
         )
+    }
 
     @Bean
     fun adminSessionStore(config: AdminSecurityConfig): AdminSessionStore =
@@ -76,7 +97,10 @@ class KraftAdminSpringSecurityConfig(
     fun adminSecurityFilter(
         chain: SecurityProviderChain
     ): FilterRegistrationBean<AdminSecurityFilter> {
-        val registration = FilterRegistrationBean(AdminSecurityFilter(chain))
+        val registration = FilterRegistrationBean(AdminSecurityFilter(
+            chain,
+            securityConfig = adminSecurityConfig()
+        ))
         registration.addUrlPatterns("/admin/*")
 
         // Use a positive number to ensure we are well outside

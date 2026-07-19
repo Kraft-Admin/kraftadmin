@@ -1,5 +1,6 @@
 package com.kraftadmin.config
 
+import com.kraftadmin.spi.DiscoveredEntity
 import security.KraftSecurityConfig
 import spi.KraftAdminResource
 
@@ -9,7 +10,7 @@ data class KraftAdminConfig(
     val title: String = "KraftAdmin",
     val mode: Mode = Mode.RUNTIME,
     val environment: Environment = Environment.PROD,
-    val discoveredEntities: Set<Class<*>> = setOf(),
+    val discoveredEntities: Set<DiscoveredEntity<*>> = setOf(),
     val generatedResources: List<KraftAdminResource<*>> = listOf(),
 //    val persistence: PersistenceConfig = PersistenceConfig.None,
     val security: KraftSecurityConfig = KraftSecurityConfig.Standalone(),

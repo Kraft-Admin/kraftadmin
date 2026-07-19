@@ -1,4 +1,4 @@
-package com.kraftadmin.persistence.mongo.provider
+package persistence.mongo.provider
 
 //class MongoDataProvider<T : Any>(
 //    private val mongoTemplate: MongoTemplate,
@@ -29,8 +29,8 @@ package com.kraftadmin.persistence.mongo.provider
 //
 //    private fun entityToMap(entity: T, columns: List<KraftAdminColumn>): Map<String, Any?> {
 //        return columns.associate { col ->
-//            val prop = entityClass.memberProperties.find { it.name == col.name }
-//            col.name to prop?.getter?.call(entity)
+//            val prop = entityClass.memberProperties.find { it.provider == col.provider }
+//            col.provider to prop?.getter?.call(entity)
 //        }
 //    }
 //}

@@ -60,8 +60,6 @@ ${constants}
 `;
 
 // 4. Write the file with directory creation
-// Adjusted path to match: kraftadmin-core/src/main/kotlin/com/kraftadmin/enums/KraftIcon.kt
-// const targetDir = path.resolve(__dirname, '../../../kraftadmin-core/src/main/kotlin/com/kraftadmin/enums');
 const targetDir = path.resolve(__dirname, '../../../kraftadmin-core/src/main/kotlin/enums');
 const targetPath = path.join(targetDir, 'KraftIcon.kt');
 

@@ -1,47 +1,140 @@
 package persistence.jpa.delete
 
-import com.kraftadmin.annotations.KraftAdminField
-import com.kraftadmin.enums.FormInputType
+import api.responses.KraftOperationResponse
+import com.kraftadmin.context.KraftAdminContextHolder
+import com.kraftadmin.events.KraftAdminEvent
+import com.kraftadmin.events.KraftLifecycleService
 import com.kraftadmin.utils.files.AdminStorageProvider
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.EntityManager
-import org.slf4j.LoggerFactory
 import org.springframework.transaction.support.TransactionTemplate
+import persistence.error.PersistenceErrorResolver
+import persistence.error.PersistenceException
 import persistence.jpa.metadata.EntityMetadata
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.isAccessible
 
 /**
- * Handles soft and hard delete operations.
+ * Handles  delete operations.
  */
 class EntityDeleter<T : Any>(
     private val entityClass: KClass<T>,
     private val entityManager: EntityManager,
     private val transactionTemplate: TransactionTemplate,
     private val metadata: EntityMetadata<T>,
-    adminStorageProvider: AdminStorageProvider
+    adminStorageProvider: AdminStorageProvider,
+    private val lifecycle: KraftLifecycleService,
+    private val errorResolver: PersistenceErrorResolver
 ) {
-    private val logger = LoggerFactory.getLogger(EntityDeleter::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
     private val fileCleanupService = FileCleanupService(adminStorageProvider)
 
-    fun delete(id: String): Boolean {
-        return transactionTemplate.execute { status ->
+    fun delete(id: String): KraftOperationResponse<Unit> {
+
+        val entity = try {
+            transactionTemplate.execute {
+                val convertedId = metadata.convertId( id)
+                entityManager.find(entityClass.java, convertedId)
+            }
+        } catch (e: Exception) {
+            // Failure at the FETCH stage (e.g. schema mismatch on a lazy
+            // collection, connection drop) is a real infrastructure error,
+            // not a "not found" — surface it as such.
+            logger.error("Delete lookup failed for ${entityClass.simpleName}#$id", e)
+            throw PersistenceException(
+                errorResolver.resolve(entityClass.simpleName ?: "Resource", e),
+                e
+            )
+        } ?: return KraftOperationResponse(
+            false,
+            "${entityClass.simpleName} not found."
+        )
+
+        val context = KraftAdminContextHolder.adminContext()
+
+        lifecycle.onBeforeDelete(
+            KraftAdminEvent.BeforeDelete(
+                resourceName = entity.javaClass.simpleName,
+                entity = entity,
+                id = id,
+                context = context
+            )
+        )
+
+        var deleteException: Exception? = null
+
+        val success = transactionTemplate.execute { status ->
+
             try {
-                val convertedId = metadata.convertId(entityManager, id)
-                val entity = entityManager.find(entityClass.java, convertedId)?: return@execute false
-                // Perform cleanup before removing
+
                 fileCleanupService.cleanupFiles(entity)
-                entityManager.remove(entity)
+
+                entityManager.remove(
+                    if (entityManager.contains(entity))
+                        entity
+                    else
+                        entityManager.merge(entity)
+                )
+
                 entityManager.flush()
+
                 true
+
             } catch (e: Exception) {
-                logger.error("Delete failed for ${entityClass.simpleName}#$id: ${e.message}", e)
+
+                logger.error(
+                    "Delete failed for ${entityClass.simpleName}#$id",
+                    e
+                )
+
                 status.setRollbackOnly()
+                deleteException = e
+
+                lifecycle.onDeleteFailed(
+                    KraftAdminEvent.DeleteFailed(
+                        resourceName = entity.javaClass.simpleName,
+                        entity = entity,
+                        id = id,
+                        context = context,
+                        exception = e,
+                    )
+                )
+
                 false
             }
+
         } ?: false
+
+        if (!success) {
+            val cause = deleteException
+            if (cause != null) {
+                // Real failure (e.g. FK constraint blocking delete) — throw so
+                // the caller gets the structured, resolved error instead of a
+                // flattened generic string.
+                throw PersistenceException(
+                    errorResolver.resolve(entityClass.simpleName ?: "Resource", cause),
+                    cause
+                )
+            }
+            return KraftOperationResponse(
+                false,
+                "Failed to delete ${entityClass.simpleName}."
+            )
+        }
+
+        lifecycle.onAfterDelete(
+            KraftAdminEvent.AfterDelete(
+                resourceName = entity.javaClass.simpleName,
+                entity = entity,
+                id = id,
+                context = context
+            )
+        )
+
+        return KraftOperationResponse(
+            true,
+            message = "${entityClass.simpleName} deleted successfully."
+        )
     }
 
     fun bulkDelete(ids: List<String>): Int {
@@ -49,20 +142,28 @@ class EntityDeleter<T : Any>(
             try {
                 var count = 0
                 ids.forEach { id ->
-                    val convertedId = metadata.convertId(entityManager, id)
+                    val convertedId = metadata.convertId( id)
                     val entity = entityManager.find(entityClass.java, convertedId)
-                    if (entity != null) { entityManager.remove(entity); count++ }
+
+                    if (entity != null) {
+                        fileCleanupService.cleanupFiles(entity)
+                        entityManager.remove(entity)
+                        count++
+                    }
                 }
                 entityManager.flush()
                 count
             } catch (e: Exception) {
                 logger.error("Bulk delete failed for ${entityClass.simpleName}: ${e.message}", e)
                 status.setRollbackOnly()
-                0
+                // Surface WHY the bulk delete failed (e.g. FK constraint on
+                // one of the records) rather than silently reporting 0
+                // deleted, which looks identical to "nothing matched."
+                throw PersistenceException(
+                    errorResolver.resolve(entityClass.simpleName ?: "Resource", e),
+                    e
+                )
             }
         } ?: 0
     }
-
-
-
 }

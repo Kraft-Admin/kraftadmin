@@ -26,6 +26,7 @@ dependencies {
 //    api(project(":kraft-pulse"))
     api(project(":kraftadmin-springboot-adapter"))
     implementation(project(":kraftadmin-ui"))
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
 
     // implementation = bundled into shadow JAR and relocated
     // Java consumers get Kotlin without declaring it manually

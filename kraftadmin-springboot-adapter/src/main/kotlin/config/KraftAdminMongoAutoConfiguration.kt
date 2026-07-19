@@ -1,8 +1,8 @@
-package com.kraftadmin.config
+package config
 
+import com.kraftadmin.logging.KraftAdminLogging
 import com.kraftadmin.spi.EntityDiscoverer
 import discovery.discoverer.mongo.MongoDocumentDiscoverer
-import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
@@ -16,7 +16,7 @@ import org.springframework.data.mongodb.core.mapping.MongoMappingContext
 @ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class KraftAdminMongoAutoConfiguration {
 
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = KraftAdminLogging.logger(javaClass)
 
 
     @Bean
@@ -24,7 +24,7 @@ class KraftAdminMongoAutoConfiguration {
     fun mongoEntityDiscoverer(
         applicationContext: ApplicationContext
     ): EntityDiscoverer {
-        logger.info("🔧 Registering MongoDB Document Discoverer")
+        logger.info("Registering MongoDB Document Discoverer")
         return MongoDocumentDiscoverer(applicationContext)
     }
 }

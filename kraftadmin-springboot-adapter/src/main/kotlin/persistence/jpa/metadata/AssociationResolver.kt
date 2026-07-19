@@ -1,7 +1,7 @@
 package persistence.jpa.metadata
 
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.*
-import org.slf4j.LoggerFactory
 import persistence.jpa.util.HibernateUtil
 import persistence.jpa.util.HibernateUtil.unproxy
 import java.lang.reflect.Field
@@ -16,7 +16,8 @@ import kotlin.reflect.jvm.javaField
  */
 object AssociationResolver {
 
-    private val logger = LoggerFactory.getLogger(AssociationResolver::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     fun extractId(entity: Any): Any? {
         val real = unproxy(entity) ?: return null

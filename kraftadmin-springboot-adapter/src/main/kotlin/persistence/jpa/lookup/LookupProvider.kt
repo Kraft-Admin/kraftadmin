@@ -2,8 +2,8 @@ package persistence.jpa.lookup
 
 import api.utils.ObjectResponse
 import com.kraftadmin.ui_descriptors.LookupDescriptor
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.EntityManager
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import kotlin.reflect.KClass
 
@@ -17,7 +17,8 @@ class LookupProvider(
     private val entityManager: EntityManager,
     private val applicationContext: ApplicationContext
 ) {
-    private val logger = LoggerFactory.getLogger(LookupProvider::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
     private val query = LookupQuery(entityManager)
 
     fun lookup(
@@ -36,14 +37,6 @@ class LookupProvider(
             return emptyList()
         }
 
-//        return query.execute(
-//            entityClass = entityClass,
-//            searchField = lookup.searchField ?: "name",
-//            displayField = lookup.displayField ?: lookup.searchField ?: "name",
-//            query = searchQuery ?: "",
-//            limit = limit
-//        )
-
         return query.execute(
             entityClass = entityClass,
             query = searchQuery ?: "",
@@ -52,24 +45,11 @@ class LookupProvider(
 
     }
 
-//    fun lookupByIds1(
-//        lookup: LookupDescriptor,
-//        ids: List<String>
-//    ): List<ObjectResponse> {
-//        val targetEntity = lookup.targetEntity ?: return emptyList()
-//        val entityClass = resolveEntityClass(targetEntity) ?: return emptyList()
-//        return query.executeByIds(
-//            entityClass = entityClass,
-//            displayField = lookup.displayField ?: lookup.searchField ?: "name",
-//            ids = ids
-//        )
-//    }
 
     fun lookupByIds(
         lookup: LookupDescriptor,
         ids: List<String>
     ): List<ObjectResponse> {
-        logger.info("lookup by ids $lookup and ids $ids")
         if (ids.isEmpty()) return emptyList()
 
         val targetEntity = lookup.targetEntity ?: run {
@@ -84,7 +64,6 @@ class LookupProvider(
 
         return query.executeByIds(
             entityClass = entityClass,
-//            displayField = lookup.displayField ?: lookup.searchField ?: "name",
             ids = ids
         )
     }

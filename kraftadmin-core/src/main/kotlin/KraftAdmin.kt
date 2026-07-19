@@ -1,10 +1,11 @@
 package com.kraftadmin
 
 import com.kraftadmin.config.KraftAdminConfig
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 
 object KraftAdmin {
-    val logger = LoggerFactory.getLogger(KraftAdmin::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     private var started = true
 

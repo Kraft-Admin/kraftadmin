@@ -1,6 +1,6 @@
 package persistence.jpa.save
 
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
@@ -10,7 +10,7 @@ import kotlin.reflect.full.primaryConstructor
  */
 class EntityInstantiator<T : Any>(private val entityClass: KClass<T>) {
 
-    private val logger = LoggerFactory.getLogger(EntityInstantiator::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
 
     fun newInstance(): T {
         return try {

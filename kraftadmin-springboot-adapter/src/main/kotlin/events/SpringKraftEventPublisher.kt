@@ -5,7 +5,7 @@ import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.events.KraftEventConsumer
 import com.kraftadmin.events.KraftEventPublisher
 import com.kraftadmin.events.SynchronousEvent
-import org.slf4j.LoggerFactory
+import com.kraftadmin.logging.KraftAdminLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
@@ -30,14 +30,21 @@ import org.springframework.stereotype.Component
 )
 open class SpringKraftEventPublisher(
     private val registry: SpringListenerRegistry,
-    private val consumers: List<KraftEventConsumer> = emptyList()
+    private val consumers: List<KraftEventConsumer>
 ) : KraftEventPublisher {
 
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
+
+    init {
+        logger.info("KraftAdmin registered ${consumers.size} consumers: ${consumers.map { it::class.simpleName }}")
+    }
 
     override fun publish(event: KraftAdminEvent) {
 
-        logger.debug("Publishing {}", event::class.simpleName)
+        logger.info("Publishing {}", event::class.simpleName)
+
+        logger.info("Publishing {}", event::class.simpleName)
 
         registry
             .getListeners(event::class.java)
@@ -58,29 +65,43 @@ open class SpringKraftEventPublisher(
             }
 
         // Framework consumers
-        consumers.forEach { consumer ->
-
-            when (event) {
-                is SynchronousEvent ->
-                    consumer.consume(event)
-
-                is AsynchronousEvent ->
-                    invokeConsumerAsync(
-                        consumer,
-//                        event
-                    )
-
-                else -> {}
+        consumers
+            .filter { it.supports(event) }
+            .forEach { consumer ->
+                when (event) {
+                    is SynchronousEvent -> consumer.consume(event)
+                    is AsynchronousEvent -> invokeConsumerAsync(consumer, event)
+                    else -> {}
+                }
             }
-        }
 
 
     }
+//
+//    private fun invokeConsumerAsync(
+//        consumer: KraftEventConsumer,
+//        event: KraftAdminEvent
+//    ) {
+//    }
 
     private fun invokeConsumerAsync(
         consumer: KraftEventConsumer,
-//        event: AsynchronousEvent & KraftAdminEvent
+        event: KraftAdminEvent // Pass the event here
     ) {
+        // Re-use your existing @Async infrastructure
+        invokeConsumerInternal(consumer, event)
+    }
+
+    @Async("kraftEventExecutor")
+    protected fun invokeConsumerInternal(
+        consumer: KraftEventConsumer,
+        event: KraftAdminEvent
+    ) {
+        runCatching {
+            consumer.consume(event)
+        }.onFailure { ex ->
+            logger.error("Async consumer ${consumer::class.simpleName} failed", ex)
+        }
     }
 
     @Async("kraftEventExecutor")
@@ -96,9 +117,7 @@ open class SpringKraftEventPublisher(
         }.onFailure { ex ->
 
             logger.error(
-                "Async listener {}.{}() failed",
-                listener.bean::class.simpleName,
-                listener.method.name,
+                "Async listener failed",
                 ex
             )
         }

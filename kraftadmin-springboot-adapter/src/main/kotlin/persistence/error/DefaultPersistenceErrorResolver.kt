@@ -1,5 +1,6 @@
 package persistence.error
 
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.EntityExistsException
 import jakarta.persistence.EntityNotFoundException
 import jakarta.persistence.PersistenceException as JpaPersistenceException
@@ -10,18 +11,17 @@ import org.hibernate.exception.JDBCConnectionException
 import org.hibernate.exception.LockAcquisitionException
 import org.hibernate.exception.SQLGrammarException
 import org.hibernate.exception.GenericJDBCException
-import org.slf4j.LoggerFactory
 import java.sql.SQLException
 
 class DefaultPersistenceErrorResolver : PersistenceErrorResolver {
 
-    private val logger = LoggerFactory.getLogger(DefaultPersistenceErrorResolver::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     override fun resolve(
         resource: String,
         exception: Throwable
     ): PersistenceErrorDetails {
-        logger.info("received exception {}", exception)
 
         if (exception is PersistenceException) {
             return exception.details

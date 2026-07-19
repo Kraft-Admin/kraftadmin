@@ -17,7 +17,8 @@ interface AdminStorageProvider {
      * @return The absolute public HTTP(S) URL or root-relative path pointing to the created asset.
      * @throws RuntimeException If any network transport, authorization, or disk I/O faults occur.
      */
-    fun upload(bytes: ByteArray, fileName: String, context: String): String
+//    fun upload(bytes: ByteArray, fileName: String, context: String, baseUrl: String = ""): String
+    fun upload(bytes: ByteArray, fileName: String, context: String, baseUrl: String = ""): String
 
     /**
      * Replaces an existing storage asset with a new binary payload.
@@ -33,7 +34,7 @@ interface AdminStorageProvider {
         if (!oldFileUrl.isNullOrBlank() && contains(oldFileUrl)) {
             delete(oldFileUrl)
         }
-        return upload(bytes, fileName, context)
+        return upload(bytes, fileName, context, baseUrl = "")
     }
 
     /**

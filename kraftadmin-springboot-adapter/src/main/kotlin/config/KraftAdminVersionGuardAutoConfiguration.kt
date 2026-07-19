@@ -1,5 +1,6 @@
 package config
 
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.boot.SpringBootVersion
@@ -11,7 +12,8 @@ import org.springframework.core.Ordered
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 class KraftAdminVersionGuardAutoConfiguration {
 
-    private val logger = LoggerFactory.getLogger(KraftAdminVersionGuardAutoConfiguration::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     @PostConstruct
     fun checkSupportedVersion() {
@@ -33,7 +35,7 @@ class KraftAdminVersionGuardAutoConfiguration {
             }
             majorVersion >= 4 -> {
                 // Log an informational notice confirming compatibility verification for Spring Boot 4.x+
-                logger.info("KraftPulse/KraftAdmin: Executing in Spring Boot 4.x environment ($version). Activation verified.")
+                logger.info("KraftPulse/KraftAdmin: Executing in Spring Boot environment ($version). Activation verified.")
             }
             else -> {
                 // standard Spring Boot 3.x environment execution path
@@ -41,4 +43,5 @@ class KraftAdminVersionGuardAutoConfiguration {
             }
         }
     }
+
 }

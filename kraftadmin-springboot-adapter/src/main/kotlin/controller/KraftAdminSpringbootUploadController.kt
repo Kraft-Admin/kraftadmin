@@ -1,6 +1,7 @@
 package controller
 
 import com.kraftadmin.utils.files.AdminStorageProvider
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -18,27 +19,71 @@ class KraftAdminSpringbootUploadController(
     private val storageProvider: AdminStorageProvider
 ) {
 
+//    @PostMapping
+//    fun uploadFile(
+//        request: HttpServletRequest,
+//        @RequestParam(value = "file", required = false) file: MultipartFile?,
+//        @RequestParam(value = "files", required = false) files: List<MultipartFile>?,
+//        @RequestParam("oldUrl", required = false) oldUrl: String?
+//    ): ResponseEntity<Map<String, Any>> {
+//
+//        // 1. Build the base URL dynamically
+//        val baseUrl = "${request.scheme}://${request.serverName}:${request.serverPort}"
+//
+//        // Handle single file
+//        if (file != null) {
+//            if (!oldUrl.isNullOrBlank() && oldUrl.startsWith("/admin/files/")) {
+//                storageProvider.delete(oldUrl)
+//            }
+//            val url = storageProvider.upload(file.bytes, file.originalFilename ?: "file", "admin", baseUrl)
+//            return ResponseEntity.ok(mapOf("url" to url))
+//        }
+//
+//        // Handle multiple files
+//        if (files != null) {
+//            val urls = files.map { f ->
+//                storageProvider.upload(f.bytes, f.originalFilename ?: "file", "admin", baseUrl)
+//            }
+//            return ResponseEntity.ok(mapOf("urls" to urls))
+//        }
+//
+//        return ResponseEntity.badRequest().build()
+//    }
+//
+//    @DeleteMapping
+//    fun deleteFile(@RequestBody request: Map<String, String>): ResponseEntity<Void> {
+//        val url = request["url"] ?: return ResponseEntity.badRequest().build()
+//
+//        //  only delete files that are managed by configured storage provider
+//        if (url.startsWith("/admin/files/")) {
+//            storageProvider.delete(url)
+//            return ResponseEntity.noContent().build()
+//        }
+//        return ResponseEntity.badRequest().build()
+//    }
+
     @PostMapping
     fun uploadFile(
+        request: HttpServletRequest,
         @RequestParam(value = "file", required = false) file: MultipartFile?,
         @RequestParam(value = "files", required = false) files: List<MultipartFile>?,
         @RequestParam("oldUrl", required = false) oldUrl: String?
     ): ResponseEntity<Map<String, Any>> {
 
+        val baseUrl = "${request.scheme}://${request.serverName}:${request.serverPort}"
 
-        // Handle single file
         if (file != null) {
-            if (!oldUrl.isNullOrBlank() && oldUrl.startsWith("/admin/files/")) {
+            // Use the interface's contains() method instead of hardcoding the path
+            if (!oldUrl.isNullOrBlank() && storageProvider.contains(oldUrl)) {
                 storageProvider.delete(oldUrl)
             }
-            val url = storageProvider.upload(file.bytes, file.originalFilename ?: "file", "admin")
+            val url = storageProvider.upload(file.bytes, file.originalFilename ?: "file", "admin", baseUrl)
             return ResponseEntity.ok(mapOf("url" to url))
         }
 
-        // Handle multiple files
         if (files != null) {
             val urls = files.map { f ->
-                storageProvider.upload(f.bytes, f.originalFilename ?: "file", "admin")
+                storageProvider.upload(f.bytes, f.originalFilename ?: "file", "admin", baseUrl)
             }
             return ResponseEntity.ok(mapOf("urls" to urls))
         }
@@ -50,11 +95,16 @@ class KraftAdminSpringbootUploadController(
     fun deleteFile(@RequestBody request: Map<String, String>): ResponseEntity<Void> {
         val url = request["url"] ?: return ResponseEntity.badRequest().build()
 
-        //  only delete files that are managed by configured storage provider
-        if (url.startsWith("/admin/files/")) {
+        // Use the provider's own logic to verify ownership
+        if (storageProvider.contains(url)) {
             storageProvider.delete(url)
             return ResponseEntity.noContent().build()
         }
         return ResponseEntity.badRequest().build()
     }
+
+    private fun buildApplicationUrl(){
+
+    }
+
 }

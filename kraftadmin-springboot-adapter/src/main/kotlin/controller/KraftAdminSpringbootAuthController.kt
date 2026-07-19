@@ -1,9 +1,9 @@
 package controller
 
+import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Conditional
 import org.springframework.http.HttpStatus
@@ -41,7 +41,8 @@ class KraftAdminSpringbootAuthController(
     private val sessionStore: AdminSessionStore,
     private val sessionConfig: SessionConfig,
 ) {
-    private val logger = LoggerFactory.getLogger(KraftAdminSpringbootAuthController::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     @PostMapping("/login")
     fun login(
@@ -49,7 +50,6 @@ class KraftAdminSpringbootAuthController(
         request: HttpServletRequest,
         response: HttpServletResponse,
     ): ResponseEntity<Map<String, String>> {
-        logger.info("Login Request ${request.method} ${request.requestURI} credentials $credentials")
         val adminRequest = AdminRequest(
             method = "POST",
             path = request.requestURI,

@@ -1,27 +1,31 @@
 package com.kraftadmin.ui_descriptors
 
+import api.responses.KraftOperationResponse
 import api.responses.ResourceDataResponse
 import api.utils.ObjectResponse
 import api.utils.ResourceRow
 import com.kraftadmin.BuildInfo
 import com.kraftadmin.config.KraftAdminRuntimeConfig
+import com.kraftadmin.enums.ProviderType
+import com.kraftadmin.logging.KraftAdminLogging
+import com.kraftadmin.spi.EntityDiscoveryService
 import security.SecurityProviderChain
-import com.kraftadmin.spi.EntityDiscoverer
+import spi.KraftDataProvider
 import com.kraftadmin.spi.KraftEnvironmentProvider
 import com.kraftadmin.utils.validation.KraftValidationExtractor
 import com.kraftadmin.utils.validation.ValidationResponse
 import config.KraftAdminPropertiesConfig
-import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 
 class KraftAdminDescriptorFactory(
     private val runtimeConfig: KraftAdminRuntimeConfig,
     private val validationExtractor: KraftValidationExtractor,
     private val environmentProvider: KraftEnvironmentProvider,
-    private val entityDiscoverer: EntityDiscoverer
+    private val entityDiscoverer: EntityDiscoveryService
 ) {
 
-    private val logger = LoggerFactory.getLogger(KraftAdminDescriptorFactory::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
+
 
     fun create(
         chain: SecurityProviderChain,
@@ -66,13 +70,16 @@ class KraftAdminDescriptorFactory(
     fun getResourceData(
         name: String,
         page: Int = 1,
-        size: Int = 20
+        size: Int = 20,
+        query: String?,
+        sortField: String?,
+        sortDirection: String?,
     ): ResourceDataResponse {
         val resource = findResource(name)
-        val columns = resource.columns // Assuming columns comes from the SPI resource
+        val columns = resource.columns // columns comes from the SPI resource
 
         // Fetch the data using the pagination logic we built
-        val pagedData = resource.getAllRows(page, size, columns)
+        val pagedData = resource.getAllRows(page, size, query, columns, sortField, sortDirection)
 
         //  Map the resource to its Descriptor and attach the live data
         val descriptor = ResourceDescriptor(
@@ -80,7 +87,20 @@ class KraftAdminDescriptorFactory(
             label = resource.label,
             customActions = resource.customActions,
             columns = columns.map { it.toDescriptor() },
-            data = pagedData
+            data = pagedData,
+            group = resource.group,
+            icon = resource.icon,
+            hidden = resource.isHidden,
+            searchable = resource.isSearchable,
+            defaultSort = resource.defaultSort,
+            readOnly = resource.isReadOnly,
+            pageSize = resource.pageSize,
+            permissionScope = resource.permissionScope,
+            exportable = resource.isExportable,
+            totalCount = getTotalCountForResource(resource.name),
+            searchableFields = resource.searchableColumns,
+            sortableFields = resource.sortableColumns,
+            provider = resource.provider
         )
 
         return ResourceDataResponse(resource = descriptor)
@@ -89,8 +109,8 @@ class KraftAdminDescriptorFactory(
     /**
      * The primary entry point for saving data with a "Pre-flight" validation check.
      */
-    fun validateAndSave(name: String, payload: Map<String, Any?>): ValidationResponse {
-        val resource = findResource(name)
+    fun validateAndSave(provider: String, payload: Map<String, Any?>): ValidationResponse {
+        val resource = findResource(provider)
         val formData = (payload["data"] as? Map<*, *>) ?: payload
         val errors = mutableMapOf<String, List<String>>()
 
@@ -104,12 +124,12 @@ class KraftAdminDescriptorFactory(
 
         // If this block isn't here, it will ALWAYS save
         if (errors.isNotEmpty()) {
-            logger.warn("Save blocked by validation errors: $errors")
+//            logger.warn("Save blocked by validation errors: $errors")
             return ValidationResponse(success = false, errors = errors)
         }
 
         // Only save if errors is empty
-        val savedData = resource.save(name, payload)
+        val savedData = resource.save(provider, payload)
         return ValidationResponse(success = true, data = savedData)
     }
 
@@ -119,36 +139,49 @@ class KraftAdminDescriptorFactory(
     }
 
     // Delete
-    fun deleteResource(name: String, id: String) {
+    fun deleteResource(name: String, id: String) : KraftOperationResponse<Unit>? {
         val resource = findResource(name)
-        resource.delete(id)
+        return resource.delete(id)
     }
 
-    fun getLookupData(resourceName: String, columnName: String, query: String?): List<ObjectResponse> {
-        val lookup = LookupDescriptor(targetEntity = resourceName, searchField = columnName, lookupKey = columnName)
-        // 1. Use your existing helper to find the resource
-        val resource = findResource(resourceName)
 
-        // We cast to JpaDataProvider<*> to access the lookup logic we wrote earlier
+    fun getLookupData(resourceName: String, search: String): List<ObjectResponse> {
+        val resource = findResource(resourceName)
         val provider = resource.dataProvider
             ?: throw IllegalStateException("Resource '$resourceName' does not use any KraftDataProvider.")
-
-        return provider.getLookupData(
-            lookup = lookup,
-            limit = 20,
-            searchQuery = query
+//        val column = resource.columns.firstOrNull { it.name == columnName }
+        val lookup = LookupDescriptor(
+            targetEntity = resourceName,
+//            lookupKey = columnName,
+//            displayField = columnName,
         )
+        return provider.getLookupData(lookup, 20, search)
+    }
+
+    fun getLookupDataByIds(name: String,  ids: List<String>): List<ObjectResponse> {
+        val resource = findResource(name)
+        val provider = resource.dataProvider
+            ?: throw IllegalStateException("Resource '$name' does not use any KraftDataProvider.")
+//        val column = resource.columns.firstOrNull { it.name == columnName }
+        val lookup = LookupDescriptor(
+            targetEntity = name,
+//            lookupKey = columnName,
+//            displayField = columnName,
+        )
+        return provider.getLookupDataByIds(lookup, ids)
     }
 
     // Build the lookup map once (or on demand)
     private val resourceRegistry: Map<String, KClass<*>> by lazy {
-        entityDiscoverer.discover()
-            .map { it.kotlin }
+        entityDiscoverer.discover(
+            provider = ProviderType.JPA
+        )
+            .map { it.entityClass.kotlin }
             .associateBy { it.simpleName ?: "" }
     }
 
     /**
-     * Maps the string name (e.g., "Venue") back to the annotated Kotlin Class.
+     * Maps the string provider (e.g., "Venue") back to the annotated Kotlin Class.
      */
     fun getEntityClassForResource(resource: String): KClass<*>? {
         return resourceRegistry[resource]
@@ -171,10 +204,16 @@ class KraftAdminDescriptorFactory(
         return resource.countAll(name) ?: 0
     }
 
+    fun getDataProviderForResource(resourceName: String): KraftDataProvider<out Any>? {
+        val resource = findResource(resourceName)
+        val provider = resource.dataProvider
+        return provider
+    }
+
     /**
      * Returns the underlying SPI resource if needed for metadata checks.
      */
-//    fun getResourceData(name: String): ResourceDataResponse {
-//        return findResource(name)
+//    fun getResourceData(provider: String): ResourceDataResponse {
+//        return findResource(provider)
 //    }
 }

@@ -2,7 +2,15 @@ package discovery.descriptors.column.jpa
 
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
-import java.time.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.isSubclassOf
 
 /**
  * Determines whether a column should be shown in the table by default.
@@ -11,31 +19,8 @@ import java.time.*
  */
 class JpaVisibilityResolver {
 
-    private val sensitiveNames = setOf(
-        "password",
-        "passwd",
-        "secret",
-        "token",
-        "accessToken",
-        "refreshToken",
-        "apiKey",
-        "apikey",
-        "privateKey",
-        "publicKey",
-        "clientSecret",
-        "jwt",
-        "otp",
-        "pin",
-        "cvv",
-        "salt",
-        "hash",
-        "signature",
-        "credential",
-        "credentials"
-    )
-
     fun shouldShowInTable(
-        field: java.lang.reflect.Field,
+        property: KProperty1<out Any, *>,
         type: FormInputType,
         searchable: Boolean,
         sortable: Boolean,
@@ -47,66 +32,76 @@ class JpaVisibilityResolver {
             return true
         }
 
-        // Sensitive fields should never be shown automatically
-        if (annotation?.sensitive == true) {
+        // Never show id by default
+        if (property.name.equals("id", ignoreCase = true)) {
             return false
         }
 
-        if (field.name.lowercase() in sensitiveNames) {
-            return false
-        }
+        val SENSITIVE_FIELD_NAMES = setOf("password", "secret", "token", "auth")
 
-        // Hide primary key by default
-        if (field.name.equals("id", ignoreCase = true)) {
-            return false
-        }
+// Inside shouldShowInTable:
 
-        val clazz = field.type
+
+        val classifier = property.returnType.classifier as? KClass<*>
 
         return when {
 
-            type == FormInputType.WYSIWYG ||
-                    type == FormInputType.OBJECT ||
-                    type == FormInputType.ARRAY ||
-                    type == FormInputType.MULTI_RELATION ||
-                    type == FormInputType.FILE ||
-                    type == FormInputType.IMAGE ||
-                    type == FormInputType.VIDEO ||
-                    type == FormInputType.AUDIO ||
-                    type == FormInputType.DOCUMENT ||
-                    type == FormInputType.JSON ->
+            // Never display these automatically
+            type in setOf(
+                FormInputType.WYSIWYG,
+                FormInputType.OBJECT,
+                FormInputType.ARRAY,
+                FormInputType.MULTI_RELATION,
+                FormInputType.FILE,
+                FormInputType.IMAGE,
+                FormInputType.VIDEO,
+                FormInputType.AUDIO,
+                FormInputType.DOCUMENT,
+                FormInputType.JSON
+            ) -> false
+
+            // Collections
+            classifier != null &&
+                    Collection::class.java.isAssignableFrom(classifier.java) ->
                 false
 
-            Collection::class.java.isAssignableFrom(clazz) ->
+            // Maps
+            classifier != null &&
+                    Map::class.java.isAssignableFrom(classifier.java) ->
                 false
 
-            Map::class.java.isAssignableFrom(clazz) ->
-                false
-
+            // OneToOne / ManyToOne
             type == FormInputType.RELATION ->
                 true
 
-            clazz == LocalDate::class.java ||
-                    clazz == LocalDateTime::class.java ||
-                    clazz == LocalTime::class.java ||
-                    clazz == Instant::class.java ||
-                    clazz == OffsetDateTime::class.java ||
-                    clazz == ZonedDateTime::class.java ->
+            // Dates
+            classifier in setOf(
+                LocalDate::class,
+                LocalDateTime::class,
+                LocalTime::class,
+                Instant::class,
+                OffsetDateTime::class,
+                ZonedDateTime::class
+            ) ->
                 true
 
-            Number::class.java.isAssignableFrom(clazz) ->
+            // Numbers
+            classifier?.isSubclassOf(Number::class) == true ->
                 true
 
-            clazz == Boolean::class.java ||
-                    clazz == java.lang.Boolean::class.java ->
+            // Boolean
+            classifier == Boolean::class ->
                 true
 
-            clazz.isEnum ->
+            // Enum
+            classifier?.isSubclassOf(Enum::class) == true ->
                 true
 
-            clazz == String::class.java ->
+            // String
+            classifier == String::class ->
                 true
 
+            // Fallback
             else ->
                 searchable || sortable
         }

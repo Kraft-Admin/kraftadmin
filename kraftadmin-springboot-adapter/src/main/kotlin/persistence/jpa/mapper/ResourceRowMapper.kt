@@ -4,9 +4,9 @@ import api.utils.ObjectResponse
 import api.utils.ResourceRow
 import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.ui_descriptors.LookupDescriptor
+import com.kraftadmin.logging.KraftAdminLogging
 import events.SpringActionRegistry
 import jakarta.persistence.*
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import persistence.jpa.conversion.ValueConverter
 import persistence.jpa.fetch.RelatedResourceFetcher
@@ -20,7 +20,7 @@ class ResourceRowMapper(
     private val applicationContext: ApplicationContext,
 ) {
 
-    private val logger = LoggerFactory.getLogger(ResourceRowMapper::class.java)
+    private val logger = KraftAdminLogging.logger(javaClass)
     private val relatedFetcher = RelatedResourceFetcher(limit = 10)
     private val springActionRegistry = applicationContext.getBean<SpringActionRegistry>(SpringActionRegistry::class.java)
 
