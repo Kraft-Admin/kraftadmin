@@ -8,9 +8,9 @@
 
 ## Overview
 
-**KraftAdmin** is a high-performance, developer-first administration and telemetry engine designed for the **Spring Boot ecosystem (Java/Kotlin)**.
+**KraftAdmin** is a high-performance, developer-first administration designed for the **Spring Boot ecosystem (Java/Kotlin)**.
 
-It acts as a **plug-and-play metadata processor** that inspects your domain models (`@Entity` / R2DBC entities) and automatically generates a sophisticated, reactive management dashboard — with **no frontend development required**.
+It acts as a **plug-and-play metadata processor** that inspects your domain models (`@Entity` / R2DBC entities) and automatically generates a management dashboard — with **no frontend development required**.
 
 At its core, KraftAdmin shifts the burden of building internal tools from manual UI coding to **declarative configuration via annotations**, making your admin dashboards consistent, reactive, and fast to set up.
 
