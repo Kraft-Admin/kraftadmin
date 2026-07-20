@@ -1,4 +1,4 @@
-package actions
+package com.kraftadmin.actions
 
 /**
  * Standardised response from any KraftActionHandler.

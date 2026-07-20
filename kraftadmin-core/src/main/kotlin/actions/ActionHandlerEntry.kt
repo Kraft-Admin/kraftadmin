@@ -1,4 +1,4 @@
-package actions
+package com.kraftadmin.actions
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kraftadmin.context.KraftActionContext

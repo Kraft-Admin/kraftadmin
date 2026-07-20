@@ -1,4 +1,4 @@
-package actions
+package com.kraftadmin.actions
 
 import com.kraftadmin.context.KraftActionContext
 

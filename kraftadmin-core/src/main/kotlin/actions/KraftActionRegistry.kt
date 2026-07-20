@@ -1,4 +1,4 @@
-package actions
+package com.kraftadmin.actions
 
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
