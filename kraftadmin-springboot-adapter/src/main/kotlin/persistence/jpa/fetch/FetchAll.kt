@@ -1,14 +1,14 @@
 package persistence.jpa.fetch
 
-import api.responses.PagedResponse
 import api.utils.ResourceRow
 import com.kraftadmin.annotations.KraftAdminResource
+import com.kraftadmin.api.responses.PagedResponse
+import com.kraftadmin.config.PaginationConfig
 import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.events.KraftLifecycleService
 import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.logging.KraftAdminLogging
-import config.PaginationConfig
 import jakarta.persistence.EntityManager
 import org.springframework.transaction.support.TransactionTemplate
 import persistence.error.PersistenceErrorResolver

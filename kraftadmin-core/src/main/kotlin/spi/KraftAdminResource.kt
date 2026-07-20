@@ -1,8 +1,8 @@
-package spi
+package com.kraftadmin.spi
 
-import api.responses.KraftOperationResponse
-import api.responses.PagedResponse
 import api.utils.ResourceRow
+import com.kraftadmin.api.responses.KraftOperationResponse
+import com.kraftadmin.api.responses.PagedResponse
 import com.kraftadmin.enums.ProviderType
 import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
@@ -46,7 +46,13 @@ interface KraftAdminResource<T : Any> {
         sortField: String?,
         sortDirection: String?
     ): PagedResponse<ResourceRow> =
-        dataProvider?.fetchAll(page, size, query, columns, sortField, sortDirection) ?: PagedResponse(emptyList(), 0, 0, 0, 0)
+        dataProvider?.fetchAll(page, size, query, columns, sortField, sortDirection) ?: PagedResponse(
+            emptyList(),
+            0,
+            0,
+            0,
+            0
+        )
 
     fun getById(id: String) = dataProvider?.fetchById(id, columns)
 

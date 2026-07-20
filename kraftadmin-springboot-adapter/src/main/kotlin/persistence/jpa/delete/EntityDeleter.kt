@@ -1,6 +1,6 @@
 package persistence.jpa.delete
 
-import api.responses.KraftOperationResponse
+import com.kraftadmin.api.responses.KraftOperationResponse
 import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.events.KraftLifecycleService

@@ -6,8 +6,6 @@ import com.kraftadmin.ui_descriptors.ColumnDescriptor
 import com.kraftadmin.ui_descriptors.FileConfigDescriptor
 import com.kraftadmin.ui_descriptors.LookupDescriptor
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
-import spi.KraftAdminResource
-import spi.KraftDataProvider
 import kotlin.reflect.KClass
 
 /**

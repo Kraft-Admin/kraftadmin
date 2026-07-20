@@ -1,6 +1,5 @@
-package events
+package com.kraftadmin.events
 
-import com.kraftadmin.events.KraftAdminEvent
 
 /**
  * Framework-agnostic listener registry.

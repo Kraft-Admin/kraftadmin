@@ -1,6 +1,6 @@
 package events
 
-import actions.ActionHandlerEntry
+import com.kraftadmin.actions.ActionHandlerEntry
 import com.kraftadmin.annotations.KraftAdminCustomAction
 import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import com.kraftadmin.ui_descriptors.KraftActionInputDescriptor

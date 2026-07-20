@@ -2,6 +2,8 @@ package events
 
 import annotations.KraftAdminOn
 import com.kraftadmin.events.KraftAdminEvent
+import com.kraftadmin.events.KraftListenerRegistry
+import com.kraftadmin.events.ListenerEntry
 import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.annotation.PostConstruct
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty

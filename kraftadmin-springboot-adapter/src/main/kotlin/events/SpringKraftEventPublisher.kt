@@ -4,6 +4,7 @@ import com.kraftadmin.events.AsynchronousEvent
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.events.KraftEventConsumer
 import com.kraftadmin.events.KraftEventPublisher
+import com.kraftadmin.events.ListenerEntry
 import com.kraftadmin.events.SynchronousEvent
 import com.kraftadmin.logging.KraftAdminLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty

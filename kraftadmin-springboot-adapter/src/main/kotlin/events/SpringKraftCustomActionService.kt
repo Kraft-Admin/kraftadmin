@@ -1,7 +1,7 @@
 package events
 
-import actions.ActionHandlerEntry
-import actions.KraftActionResponse
+import com.kraftadmin.actions.ActionHandlerEntry
+import com.kraftadmin.actions.KraftActionResponse
 import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory

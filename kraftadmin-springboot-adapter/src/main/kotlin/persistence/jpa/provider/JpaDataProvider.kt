@@ -1,16 +1,16 @@
 package persistence.jpa.provider
 
-import api.responses.KraftOperationResponse
-import api.responses.PagedResponse
 import api.utils.ObjectResponse
 import api.utils.ResourceRow
+import com.kraftadmin.api.responses.KraftOperationResponse
+import com.kraftadmin.api.responses.PagedResponse
+import com.kraftadmin.config.PaginationConfig
 import com.kraftadmin.spi.KraftAdminColumn
-import spi.KraftDataProvider
 import com.kraftadmin.ui_descriptors.LookupDescriptor
 import com.kraftadmin.utils.files.AdminStorageProvider
 import com.kraftadmin.logging.KraftAdminLogging
+import com.kraftadmin.spi.KraftDataProvider
 import config.KraftAdminProperties
-import config.PaginationConfig
 import jakarta.persistence.EntityManager
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.support.TransactionTemplate
@@ -42,10 +42,8 @@ class JpaDataProvider<T : Any>(
     private val transactionTemplate: TransactionTemplate,
     private val applicationContext: ApplicationContext,
     private val adminStorageProvider: AdminStorageProvider,
-//    private val kraftAdminAuditor: KraftAdminAuditor,
     private val securityChain: SecurityProviderChain,
     private val properties: KraftAdminProperties,
-//    private val telemetryService: KraftTelemetryService
     paginationProperties: PaginationConfig,
     lifecycleService: SpringKraftLifecycleService,
     persistenceValidationService: PersistenceValidationService

@@ -1,8 +1,8 @@
 package com.kraftadmin.ui_descriptors
 
 import com.kraftadmin.annotations.KraftAdminResource
-import api.responses.PagedResponse
 import api.utils.ResourceRow
+import com.kraftadmin.api.responses.PagedResponse
 import com.kraftadmin.enums.ProviderType
 
 data class ResourceDescriptor(

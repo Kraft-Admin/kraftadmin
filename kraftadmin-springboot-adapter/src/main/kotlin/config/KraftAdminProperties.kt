@@ -1,6 +1,16 @@
 package config
 
 import com.kraftadmin.BuildInfo
+import com.kraftadmin.config.FeatureConfig
+import com.kraftadmin.config.KraftAdminPropertiesConfig
+import com.kraftadmin.config.LocaleConfig
+import com.kraftadmin.config.LoggingConfig
+import com.kraftadmin.config.PaginationConfig
+import com.kraftadmin.config.SecurityConfig
+import com.kraftadmin.config.StorageConfig
+import com.kraftadmin.config.TelemetryConfig
+import com.kraftadmin.config.TelemetryProvider
+import com.kraftadmin.config.ThemeConfig
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.NestedConfigurationProperty
 import security.BasicAuthConfig

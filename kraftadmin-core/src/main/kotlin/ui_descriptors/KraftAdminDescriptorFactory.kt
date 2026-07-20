@@ -1,20 +1,23 @@
 package com.kraftadmin.ui_descriptors
 
-import api.responses.KraftOperationResponse
-import api.responses.ResourceDataResponse
+
 import api.utils.ObjectResponse
 import api.utils.ResourceRow
 import com.kraftadmin.BuildInfo
+import com.kraftadmin.api.responses.KraftOperationResponse
+import com.kraftadmin.api.responses.ResourceDataResponse
+import com.kraftadmin.config.KraftAdminPropertiesConfig
 import com.kraftadmin.config.KraftAdminRuntimeConfig
 import com.kraftadmin.enums.ProviderType
 import com.kraftadmin.logging.KraftAdminLogging
 import com.kraftadmin.spi.EntityDiscoveryService
+import com.kraftadmin.spi.KraftDataProvider
 import security.SecurityProviderChain
-import spi.KraftDataProvider
 import com.kraftadmin.spi.KraftEnvironmentProvider
 import com.kraftadmin.utils.validation.KraftValidationExtractor
 import com.kraftadmin.utils.validation.ValidationResponse
-import config.KraftAdminPropertiesConfig
+import kotlin.collections.find
+import kotlin.collections.map
 import kotlin.reflect.KClass
 
 class KraftAdminDescriptorFactory(

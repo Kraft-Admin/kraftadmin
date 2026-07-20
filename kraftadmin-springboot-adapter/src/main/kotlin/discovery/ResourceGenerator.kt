@@ -3,6 +3,7 @@ package discovery
 import config.JpaDataProviderFactory
 import com.kraftadmin.spi.AbstractResource
 import com.kraftadmin.spi.DiscoveredEntity
+import com.kraftadmin.spi.KraftAdminResource
 import com.kraftadmin.utils.files.AdminStorageProvider
 import config.KraftAdminProperties
 import discovery.descriptors.action.ActionDescriptorBuilder
@@ -17,7 +18,6 @@ import persistence.jpa.metadata.EntityMetadata
 import persistence.jpa.provider.JpaDataProvider
 import persistence.jpa.validation.PersistenceValidationService
 import security.SecurityProviderChain
-import spi.KraftAdminResource
 
 object ResourceGenerator {
 

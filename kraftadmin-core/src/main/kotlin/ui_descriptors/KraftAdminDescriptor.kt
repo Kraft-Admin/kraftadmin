@@ -1,9 +1,10 @@
 package com.kraftadmin.ui_descriptors
 
+import com.kraftadmin.config.FeatureConfig
+import com.kraftadmin.config.LocaleConfig
+import com.kraftadmin.config.PaginationConfig
 import security.AdminUserDTO
-import config.FeatureConfig
-import config.LocaleConfig
-import config.PaginationConfig
+
 
 data class KraftAdminDescriptor(
     val basePath: String,

@@ -1,4 +1,4 @@
-package api.responses
+package com.kraftadmin.api.responses
 
 data class KraftOperationResponse<T>(
     val success: Boolean,

@@ -1,4 +1,4 @@
-package api.responses
+package com.kraftadmin.api.responses
 
 import api.utils.ResourceRow
 import com.kraftadmin.ui_descriptors.ResourceDescriptor

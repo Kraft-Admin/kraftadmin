@@ -1,4 +1,4 @@
-package config
+package com.kraftadmin.config
 
 import security.BasicAuthConfig
 import java.util.UUID

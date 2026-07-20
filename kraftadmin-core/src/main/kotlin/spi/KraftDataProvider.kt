@@ -1,9 +1,9 @@
-package spi
+package com.kraftadmin.spi
 
-import api.responses.KraftOperationResponse
-import api.responses.PagedResponse
 import api.utils.ObjectResponse
 import api.utils.ResourceRow
+import com.kraftadmin.api.responses.KraftOperationResponse
+import com.kraftadmin.api.responses.PagedResponse
 import com.kraftadmin.spi.KraftAdminColumn
 import com.kraftadmin.ui_descriptors.LookupDescriptor
 

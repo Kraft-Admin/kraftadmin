@@ -1,6 +1,6 @@
 package exception
 
-import api.responses.KraftOperationResponse
+import com.kraftadmin.api.responses.KraftOperationResponse
 import com.kraftadmin.logging.KraftAdminLogging
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
