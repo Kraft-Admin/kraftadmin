@@ -23,14 +23,10 @@ kotlin {
 
 dependencies {
     api(project(":kraftadmin-core"))
-//    api(project(":kraft-pulse"))
     api(project(":kraftadmin-springboot-adapter"))
     implementation(project(":kraftadmin-ui"))
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
 
-    // implementation = bundled into shadow JAR and relocated
-    // Java consumers get Kotlin without declaring it manually
-    // Kotlin consumers use their own Kotlin — no conflict because it's relocated
     api("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
     api("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
 

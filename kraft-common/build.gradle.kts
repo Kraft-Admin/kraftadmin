@@ -10,7 +10,6 @@ repositories {
 
 dependencies {
     api("org.slf4j:slf4j-api:2.0.9")
-    implementation("org.xerial:sqlite-jdbc:3.45.1.0")
     testImplementation(kotlin("test"))
 }
 

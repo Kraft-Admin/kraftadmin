@@ -10,14 +10,12 @@ repositories {
 
 dependencyManagement {
     imports {
-//        mavenBom("org.springframework.boot:spring-boot-dependencies:3.3.1")
         mavenBom("org.springframework.boot:spring-boot-dependencies:3.2.0")
     }
 }
 
 dependencies {
     api(project(":kraftadmin-core"))
-//    api(project(":kraftpulse-springboot-adapter"))
 
     // Spring APIs — consumer provides these
     compileOnly("org.springframework.boot:spring-boot-autoconfigure")
