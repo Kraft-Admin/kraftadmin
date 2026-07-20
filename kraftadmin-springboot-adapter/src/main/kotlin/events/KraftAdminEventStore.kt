@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.kraftadmin.model.KraftEventPage
 import com.kraftadmin.model.KraftEventRecord
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import java.nio.file.Files
 import java.nio.file.Path
@@ -11,6 +12,7 @@ import java.time.Instant
 import kotlin.io.path.isRegularFile
 
 @Service
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class KraftAdminEventStore {
 
     private val mapper = jacksonObjectMapper()

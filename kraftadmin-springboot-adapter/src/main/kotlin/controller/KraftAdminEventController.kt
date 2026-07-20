@@ -2,6 +2,7 @@ package controller
 
 import com.kraftadmin.model.KraftEventPage
 import events.KraftAdminEventStore
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -10,6 +11,7 @@ import java.time.Instant
 
 @RestController
 @RequestMapping("/admin/api/events")
+@ConditionalOnProperty(prefix = "kraftadmin", name = ["enabled"], havingValue = "true")
 class KraftAdminEventController(
     private val eventStore: KraftAdminEventStore
 ) {
