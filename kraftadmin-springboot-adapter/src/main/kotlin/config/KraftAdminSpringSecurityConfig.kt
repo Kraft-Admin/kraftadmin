@@ -1,20 +1,20 @@
 package config
 
 import com.kraftadmin.logging.KraftAdminLogging
+import com.kraftadmin.security.AdminSecurityConfig
+import com.kraftadmin.security.AdminSecurityProvider
+import com.kraftadmin.security.AdminSessionStore
+import com.kraftadmin.security.BuiltinBasicAuthProvider
+import com.kraftadmin.security.SessionConfig
+import com.kraftadmin.security.SessionSecurityProvider
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.Environment
-import security.AdminSecurityConfig
 import security.AdminSecurityFilter
-import security.AdminSecurityProvider
-import security.AdminSessionStore
-import security.BuiltinBasicAuthProvider
 import security.SecurityProviderChain
-import security.SessionConfig
-import security.SessionSecurityProvider
 import security.SpringSecurityAdapter
 
 @AutoConfiguration

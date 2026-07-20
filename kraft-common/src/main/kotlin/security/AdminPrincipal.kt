@@ -1,5 +1,4 @@
-package security
-
+package com.kraftadmin.security
 
 /**
  * Uniform principal passed to all admin handlers regardless of framework.

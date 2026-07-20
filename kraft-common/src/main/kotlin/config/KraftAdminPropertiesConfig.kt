@@ -1,6 +1,6 @@
 package com.kraftadmin.config
 
-import security.BasicAuthConfig
+import com.kraftadmin.security.BasicAuthConfig
 import java.util.UUID
 
 interface KraftAdminPropertiesConfig {

@@ -1,8 +1,8 @@
 package security
 
+import com.kraftadmin.security.AdminPrincipal
+import com.kraftadmin.security.AdminUserDTO
 import org.springframework.security.core.Authentication
-import security.AdminUserDTO
-import security.AdminPrincipal
 
 
 class AdminPrincipalMapper {

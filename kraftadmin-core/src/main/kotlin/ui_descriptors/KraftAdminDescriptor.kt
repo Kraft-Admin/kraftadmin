@@ -3,7 +3,7 @@ package com.kraftadmin.ui_descriptors
 import com.kraftadmin.config.FeatureConfig
 import com.kraftadmin.config.LocaleConfig
 import com.kraftadmin.config.PaginationConfig
-import security.AdminUserDTO
+import com.kraftadmin.security.AdminUserDTO
 
 
 data class KraftAdminDescriptor(

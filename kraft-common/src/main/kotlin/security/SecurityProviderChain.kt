@@ -1,5 +1,10 @@
 package security
 
+import com.kraftadmin.security.AdminRequest
+import com.kraftadmin.security.AdminResponse
+import com.kraftadmin.security.AdminSecurityProvider
+import com.kraftadmin.security.AdminUserDTO
+
 /**
  * Chain of responsibility. Tries each [AdminSecurityProvider] in [priority]
  * order and returns the first non-null principal.

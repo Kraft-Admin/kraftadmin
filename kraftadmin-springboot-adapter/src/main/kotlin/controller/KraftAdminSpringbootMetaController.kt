@@ -9,7 +9,6 @@ import com.kraftadmin.api.responses.KraftOperationResponse
 import com.kraftadmin.api.responses.LibraryFeature
 import com.kraftadmin.api.responses.ResourceDataResponse
 import com.kraftadmin.api.responses.SystemStatus
-import security.SecurityProviderChain
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptor
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory
 import com.kraftadmin.logging.KraftAdminLogging
@@ -26,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import events.SpringKraftCustomActionService
+import security.SecurityProviderChain
 
 @RestController
 @RequestMapping("\${kraftadmin.base-path:/admin}/api")

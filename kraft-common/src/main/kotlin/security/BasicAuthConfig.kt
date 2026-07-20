@@ -1,4 +1,4 @@
-package security
+package com.kraftadmin.security
 
 class BasicAuthConfig {
     var username: String = "admin@example.com"

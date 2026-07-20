@@ -1,4 +1,4 @@
-package security
+package com.kraftadmin.security
 
 import java.time.Instant
 import java.util.UUID

@@ -1,4 +1,4 @@
-package security
+package com.kraftadmin.security
 
 data class AdminUserDTO(
     val name: String,

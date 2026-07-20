@@ -1,5 +1,6 @@
-package security
+package com.kraftadmin.security
 
+import security.SecurityProviderChain
 import kotlin.collections.plusAssign
 
 /**

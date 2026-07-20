@@ -1,6 +1,6 @@
-package security
+package com.kraftadmin.security
 
-import config.KraftAdminPropertiesConfig
+import com.kraftadmin.config.KraftAdminPropertiesConfig
 
 
 /**

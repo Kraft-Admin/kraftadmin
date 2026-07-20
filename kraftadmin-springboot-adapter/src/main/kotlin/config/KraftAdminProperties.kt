@@ -11,9 +11,9 @@ import com.kraftadmin.config.StorageConfig
 import com.kraftadmin.config.TelemetryConfig
 import com.kraftadmin.config.TelemetryProvider
 import com.kraftadmin.config.ThemeConfig
+import com.kraftadmin.security.BasicAuthConfig
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.NestedConfigurationProperty
-import security.BasicAuthConfig
 
 @ConfigurationProperties(prefix = "kraftadmin")
 data class KraftAdminProperties(
