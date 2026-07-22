@@ -10,7 +10,7 @@
 
 **KraftAdmin** is a high-performance, developer-first administration designed for the **Spring Boot ecosystem (Java/Kotlin)**.
 
-It acts as a **plug-and-play metadata processor** that inspects your domain models (`@Entity` / R2DBC entities) and automatically generates a management dashboard — with **no frontend development required**.
+It acts as a **plug-and-play metadata processor** that inspects your domain models (`@Entity`) and automatically generates a management dashboard — with **no frontend development required**.
 
 At its core, KraftAdmin shifts the burden of building internal tools from manual UI coding to **declarative configuration via annotations**, making your admin dashboards consistent, reactive, and fast to set up.
 
@@ -53,7 +53,7 @@ implementation 'com.bowerzlabs:kraft-admin:0.1.27-beta'
   By scanning your `@Entity` classes, it builds full CRUD (Create, Read, Update, Delete) interfaces instantly.
 
 - **Unified Reactive/Blocking Support**  
-  Works seamlessly with both traditional Spring Data JPA and modern R2DBC/WebFlux reactive stack.
+  Works seamlessly with both traditional Spring Data JPA.
 
 - **Smart Field Inference**  
   Through the reflection, maps Java types and JPA annotations to advanced UI components like:
@@ -61,17 +61,9 @@ implementation 'com.bowerzlabs:kraft-admin:0.1.27-beta'
     - Image uploaders
     - Searchable relationship pickers
 
-- **Application-Wide Telemetry**  
-  Provides a centralized system for analytics, enabling real-time observation of:
-    - Record changes
-    - System health
-
-- **Audit Integration**  
-  Native support for `BaseEntity` auditing — tracking **who changed what and when** at the database level.
-
 ---
 
-## 🛠️ Features: Current vs Planned
+## Features: Current vs Planned
 
 | Feature Category | Current (Beta) | Planned (Roadmap)                        |
 |-----------------|----------------|------------------------------------------|
@@ -84,13 +76,13 @@ implementation 'com.bowerzlabs:kraft-admin:0.1.27-beta'
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 KraftAdmin can be configured using either **`application.properties`** or **`application.yml`** depending on your parent application setup.
 
 ---
 
-### 📄 application.properties
+### application.properties
 
 ```properties
 ## Enable the library
@@ -144,7 +136,7 @@ kraftadmin.telemetry-config.enabled=true
 
 ```
 
-### 📄 application.yml
+### application.yml
 
 ```yaml
 kraftadmin:
