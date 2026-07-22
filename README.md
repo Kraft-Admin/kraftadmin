@@ -4,13 +4,34 @@
 
 **KraftAdmin** is currently in **beta** and **not yet stable for production use**. Use it for experimentation, internal testing, or learning purposes only.
 
+### Compatibility
+
+KraftAdmin currently supports:
+
+* **Spring Boot 3.x**
+* **Java 17+**
+* **Java and Kotlin-based Spring Boot applications**
+* **JPA / Hibernate**
+
+The library is currently being actively developed, so APIs and features may change between beta releases.
+
+### Temporarily Disabling KraftAdmin
+
+If you encounter an issue with KraftAdmin and need your application to continue running while investigating the problem, you can temporarily disable the library:
+
+```properties
+kraftadmin.enabled=false
+```
+
+This disables KraftAdmin's administration functionality without requiring you to remove the dependency from your project. You can then re-enable it after investigating the issue or reporting the problem.
+
 ---
 
 ## Overview
 
-**KraftAdmin** is a high-performance, developer-first administration designed for the **Spring Boot ecosystem (Java/Kotlin)**.
+**KraftAdmin** is a high-performance, developer-first administration library designed for the **Spring Boot ecosystem (Java/Kotlin)**.
 
-It acts as a **plug-and-play metadata processor** that inspects your domain models (`@Entity` / R2DBC entities) and automatically generates a management dashboard — with **no frontend development required**.
+It acts as a **plug-and-play metadata processor** that inspects your domain models (`@Entity`) and automatically generates a management dashboard — with **no frontend development required**.
 
 At its core, KraftAdmin shifts the burden of building internal tools from manual UI coding to **declarative configuration via annotations**, making your admin dashboards consistent, reactive, and fast to set up.
 
@@ -52,26 +73,15 @@ implementation 'com.bowerzlabs:kraft-admin:0.1.27-beta'
 - **Zero-Config UI Generation**  
   By scanning your `@Entity` classes, it builds full CRUD (Create, Read, Update, Delete) interfaces instantly.
 
-- **Unified Reactive/Blocking Support**  
-  Works seamlessly with both traditional Spring Data JPA and modern R2DBC/WebFlux reactive stack.
-
 - **Smart Field Inference**  
   Through the reflection, maps Java types and JPA annotations to advanced UI components like:
     - WYSIWYG editors
     - Image uploaders
     - Searchable relationship pickers
-
-- **Application-Wide Telemetry**  
-  Provides a centralized system for analytics, enabling real-time observation of:
-    - Record changes
-    - System health
-
-- **Audit Integration**  
-  Native support for `BaseEntity` auditing — tracking **who changed what and when** at the database level.
-
+    - 
 ---
 
-## 🛠️ Features: Current vs Planned
+## Features: Current vs Planned
 
 | Feature Category | Current (Beta) | Planned (Roadmap)                        |
 |-----------------|----------------|------------------------------------------|
@@ -84,16 +94,17 @@ implementation 'com.bowerzlabs:kraft-admin:0.1.27-beta'
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 KraftAdmin can be configured using either **`application.properties`** or **`application.yml`** depending on your parent application setup.
 
 ---
 
-### 📄 application.properties
+### application.properties
 
 ```properties
-## Enable the library
+## Enable/Disable the library
+kraftadmin.enabled=true
 
 # 1. Root Level Settings
 kraftadmin.base-path=/admin
@@ -144,10 +155,11 @@ kraftadmin.telemetry-config.enabled=true
 
 ```
 
-### 📄 application.yml
+### application.yml
 
 ```yaml
 kraftadmin:
+  enabled: true
   base-path: /admin
   title: "KraftAdmin Dashboard"
   logo-url: "https://example.com/logo.png"
