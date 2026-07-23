@@ -4,6 +4,7 @@ import com.kraftadmin.KraftAdmin
 import com.kraftadmin.config.KraftAdminConfig
 import com.kraftadmin.config.KraftAdminRuntimeConfig
 import com.kraftadmin.events.KraftEventConsumer
+import com.kraftadmin.events.KraftEventPublisher
 import com.kraftadmin.logging.KraftAdminLogging
 import com.kraftadmin.spi.EntityDiscoveryService
 import discovery.ResourceGenerator
@@ -111,21 +112,17 @@ class KraftAdminSpringBootAutoConfiguration(
     }
 
     @Bean
-    @ConditionalOnMissingBean(SpringKraftEventPublisher::class)
+    @ConditionalOnMissingBean(KraftEventPublisher::class)
     fun kraftEventPublisher(
         registry: SpringListenerRegistry,
         consumers: List<KraftEventConsumer>
-    ): SpringKraftEventPublisher {
-
-        return SpringKraftEventPublisher(
-            registry,
-            consumers
-        )
+    ): KraftEventPublisher {
+        return SpringKraftEventPublisher(registry, consumers)
     }
 
     @Bean
     @ConditionalOnMissingBean(SpringKraftLifecycleService::class)
-    fun kraftSpringLifeCycle(publisher: SpringKraftEventPublisher): SpringKraftLifecycleService {
+    fun kraftSpringLifeCycle(publisher: KraftEventPublisher): SpringKraftLifecycleService {
         return SpringKraftLifecycleService(publisher)
     }
 
