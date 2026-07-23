@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { adminSettings } from '../stores/settings';
   import { Loader } from 'lucide-svelte';
+    import MetricChart from '../components/MetricChart.svelte';
   
   let dashboardData: any = null;
   let loading = true;
@@ -49,7 +50,7 @@
       {/each}
     </div>
 
-    <div class="bg-bg-surface border border-border-subtle rounded-3xl overflow-hidden shadow-sm">
+    <!-- <div class="bg-bg-surface border border-border-subtle rounded-3xl overflow-hidden shadow-sm">
       <div class="p-6 border-b border-border-subtle flex justify-between items-center bg-bg-main/50">
         <h2 class="text-xl font-bold text-text-main">Library Capabilities</h2>
         <span class="text-[10px] font-bold text-text-muted uppercase italic">v{$adminSettings?.version || '0.1.0'}</span>
@@ -78,6 +79,37 @@
           </tbody>
         </table>
       </div>
+    </div> -->
+
+
+
+    {#if dashboardData.metrics?.length > 0}
+
+  <section class="space-y-4">
+
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-text-main">
+          Metrics
+        </h2>
+
+        <p class="text-sm text-text-muted">
+          Track your application's key metrics over time.
+        </p>
+      </div>
     </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+      {#each dashboardData.metrics as metric}
+        <MetricChart {metric} />
+      {/each}
+
+    </div>
+
+  </section>
+
+{/if}
+
   {/if}
 </div>
