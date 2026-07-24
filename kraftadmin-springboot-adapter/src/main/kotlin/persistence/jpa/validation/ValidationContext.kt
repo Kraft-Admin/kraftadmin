@@ -1,7 +1,7 @@
 package persistence.jpa.validation
 
 import jakarta.persistence.EntityManager
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import kotlin.reflect.KClass
 
 /**
@@ -44,7 +44,7 @@ data class ValidationContext<T : Any>(
     /**
      * Entity metadata discovered during startup.
      */
-    val metadata: EntityMetadata<T>,
+    val metadata: JpaEntityMetadata<T>,
 
     /**
      * Active EntityManager.

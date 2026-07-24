@@ -3,7 +3,7 @@ package discovery.descriptors.column.jpa
 import validation.JakartaValidationExtractor
 import java.lang.reflect.Field
 
-class JpaValidationResolver {
+class ValidationResolver {
 
     private val extractor = JakartaValidationExtractor()
 
