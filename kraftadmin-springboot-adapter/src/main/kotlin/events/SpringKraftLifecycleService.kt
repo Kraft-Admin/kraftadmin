@@ -1,10 +1,11 @@
 package events
 
 import com.kraftadmin.events.KraftAdminEvent
+import com.kraftadmin.events.KraftEventPublisher
 import com.kraftadmin.events.KraftLifecycleService
 
 class SpringKraftLifecycleService(
-    private val publisher: SpringKraftEventPublisher
+    private val publisher: KraftEventPublisher
 ) : KraftLifecycleService {
 
     // Simple delegation helper

@@ -4,6 +4,7 @@ import com.kraftadmin.actions.ActionHandlerEntry
 import com.kraftadmin.actions.KraftActionResponse
 import com.kraftadmin.context.KraftAdminContextHolder
 import com.kraftadmin.events.KraftAdminEvent
+import com.kraftadmin.events.KraftEventPublisher
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory
 import com.kraftadmin.logging.KraftAdminLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service
 class SpringKraftCustomActionService(
     private val descriptorFactory: KraftAdminDescriptorFactory,
     private val actionRegistry: SpringActionRegistry,
-    private val publisher: SpringKraftEventPublisher,
+    private val publisher: KraftEventPublisher,
 ) {
 
 

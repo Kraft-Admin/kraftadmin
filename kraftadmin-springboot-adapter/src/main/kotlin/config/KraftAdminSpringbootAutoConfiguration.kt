@@ -6,10 +6,12 @@ import com.kraftadmin.config.KraftAdminRuntimeConfig
 import com.kraftadmin.events.KraftEventConsumer
 import com.kraftadmin.events.KraftEventPublisher
 import com.kraftadmin.logging.KraftAdminLogging
+import com.kraftadmin.persistence.metrics.KraftMetricService
 import com.kraftadmin.spi.EntityDiscoveryService
 import discovery.ResourceGenerator
 import discovery.discoverer.environment.SpringBootEnvironmentProvider
 import com.kraftadmin.spi.KraftEnvironmentProvider
+import com.kraftadmin.spi.KraftMetricProvider
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory
 import com.kraftadmin.utils.files.AdminStorageProvider
 import com.kraftadmin.utils.files.CloudinaryProvider
@@ -36,6 +38,8 @@ import org.springframework.core.env.Environment
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import events.SpringKraftLifecycleService
+import jakarta.persistence.EntityManager
+import persistence.jpa.metrics.JpaMetricProvider
 import util.JacksonKraftJsonSerializer
 import validation.JakartaValidationExtractor
 
@@ -130,6 +134,27 @@ class KraftAdminSpringBootAutoConfiguration(
     @ConditionalOnMissingBean
     fun kraftEventStore() : KraftAdminEventStore {
         return KraftAdminEventStore()
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(KraftMetricProvider::class)
+    fun kraftMetricsProvider(
+        entityManager: EntityManager,
+        transactionTemplate: TransactionTemplate
+    ): KraftMetricProvider {
+        return JpaMetricProvider(
+            entityManager = entityManager,
+            transactionTemplate = transactionTemplate
+        )
+    }
+
+
+    @Bean
+    @ConditionalOnMissingBean(KraftMetricService::class)
+    fun kraftMetricsService(
+        metricProviders: List<KraftMetricProvider>
+    ): KraftMetricService {
+        return KraftMetricService(metricProviders)
     }
 
     @Bean
