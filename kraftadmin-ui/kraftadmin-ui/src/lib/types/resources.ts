@@ -126,7 +126,7 @@ export interface KraftAdminColumn {
   label: string;
   lookup: LookupDescriptor | null;
   name: string;
-  placeholder: string | null;
+  placeholder: string | undefined;
   required: boolean;
   searchable: boolean;
   selectOptions: SelectOption[] | null;
