@@ -2,14 +2,10 @@ package discovery.descriptors.column.jpa
 
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.enums.FormInputType
-import com.kraftadmin.spi.SelectOption
 import com.kraftadmin.ui_descriptors.ColumnDescriptor
-import com.kraftadmin.ui_descriptors.ElementCollectionDescriptor
-import com.kraftadmin.ui_descriptors.ElementCollectionShape
-import com.kraftadmin.ui_descriptors.EmbeddableFieldDescriptor
-import com.kraftadmin.ui_descriptors.ValueType
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import discovery.descriptors.column.resolvers.EnumHelper
+import discovery.descriptors.column.resolvers.FileResolver
 import jakarta.persistence.Transient
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
@@ -19,8 +15,8 @@ import kotlin.reflect.jvm.javaField
 class JpaSubColumnBuilder(
     private val annotationResolver: JpaAnnotationResolver,
     private val typeResolver: JpaTypeResolver,
-    private val validationResolver: JpaValidationResolver,
-    private val fileResolver: JpaFileResolver
+    private val validationResolver: ValidationResolver,
+    private val fileResolver: FileResolver
 ) {
 
     fun build(

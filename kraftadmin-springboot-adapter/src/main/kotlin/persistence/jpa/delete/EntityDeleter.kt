@@ -10,7 +10,7 @@ import jakarta.persistence.EntityManager
 import org.springframework.transaction.support.TransactionTemplate
 import persistence.error.PersistenceErrorResolver
 import persistence.error.PersistenceException
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import kotlin.reflect.KClass
 
 /**
@@ -20,7 +20,7 @@ class EntityDeleter<T : Any>(
     private val entityClass: KClass<T>,
     private val entityManager: EntityManager,
     private val transactionTemplate: TransactionTemplate,
-    private val metadata: EntityMetadata<T>,
+    private val metadata: JpaEntityMetadata<T>,
     adminStorageProvider: AdminStorageProvider,
     private val lifecycle: KraftLifecycleService,
     private val errorResolver: PersistenceErrorResolver

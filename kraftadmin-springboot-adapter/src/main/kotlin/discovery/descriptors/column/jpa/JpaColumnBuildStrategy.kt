@@ -2,7 +2,7 @@ package discovery.descriptors.column.jpa
 
 import com.kraftadmin.spi.KraftAdminColumn
 import discovery.descriptors.column.ColumnBuildStrategy
-import org.slf4j.LoggerFactory
+import discovery.descriptors.column.resolvers.FileResolver
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
@@ -20,8 +20,8 @@ class JpaColumnBuildStrategy : ColumnBuildStrategy {
             annotationResolver = JpaAnnotationResolver(),
             typeResolver = JpaTypeResolver(context),
             lookupResolver = JpaLookupResolver(context.annotationResolver),
-            validationResolver = JpaValidationResolver(),
-            fileResolver = JpaFileResolver(),
+            validationResolver = ValidationResolver(),
+            fileResolver = FileResolver(),
             visibilityResolver = JpaVisibilityResolver(),
             subColumnBuilder = context.subColumnBuilder,
             elementCollectionResolver = ElementCollectionResolver

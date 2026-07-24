@@ -1,5 +1,6 @@
 package discovery.descriptors.column.jpa
 
+import discovery.descriptors.column.resolvers.FileResolver
 import validation.JakartaValidationExtractor
 import kotlin.reflect.KClass
 
@@ -17,9 +18,9 @@ class JpaColumnContext(
 
     val lookupResolver = JpaLookupResolver(annotationResolver)
 
-    val validationResolver = JpaValidationResolver()
+    val validationResolver = ValidationResolver()
 
-    val fileResolver = JpaFileResolver()
+    val fileResolver = FileResolver()
 
     val visibilityResolver = JpaVisibilityResolver()
 

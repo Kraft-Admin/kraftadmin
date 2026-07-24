@@ -6,7 +6,7 @@ import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.EntityManager
 import jakarta.persistence.Id
 import persistence.jpa.metadata.AssociationResolver
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
@@ -29,7 +29,7 @@ class LookupQuery(private val entityManager: EntityManager) {
         query: String,
         limit: Int = 20
     ): List<ObjectResponse> {
-        val entityMetadata = EntityMetadata(entityClass)
+        val entityMetadata = JpaEntityMetadata(entityClass)
         val displayField = entityMetadata.displayField
 
         return try {

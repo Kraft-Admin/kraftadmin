@@ -12,7 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate
 import persistence.error.PersistenceErrorResolver
 import persistence.error.PersistenceException
 import persistence.jpa.mapper.ResourceRowMapper
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import persistence.jpa.util.HibernateUtil
 import kotlin.reflect.KClass
 
@@ -20,7 +20,7 @@ class FetchById<T : Any>(
     private val entityClass: KClass<T>,
     private val entityManager: EntityManager,
     private val transactionTemplate: TransactionTemplate,
-    private val metadata: EntityMetadata<T>,
+    private val metadata: JpaEntityMetadata<T>,
     private val rowMapper: ResourceRowMapper,
     private val lifecycle: KraftLifecycleService,
     val errorResolver: PersistenceErrorResolver

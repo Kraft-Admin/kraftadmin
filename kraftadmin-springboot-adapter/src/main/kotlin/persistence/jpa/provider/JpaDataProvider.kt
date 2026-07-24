@@ -20,13 +20,13 @@ import persistence.jpa.fetch.FetchAll
 import persistence.jpa.fetch.FetchById
 import persistence.jpa.lookup.LookupProvider
 import persistence.jpa.mapper.ResourceRowMapper
-import persistence.jpa.metadata.EntityMetadata
 import persistence.jpa.save.EntityInstantiator
 import persistence.jpa.save.EntitySaver
 import persistence.jpa.save.PropertyWriter
 import persistence.jpa.save.RelationshipWriter
 import events.SpringKraftLifecycleService
 import persistence.error.DefaultPersistenceErrorResolver
+import persistence.jpa.metadata.JpaEntityMetadata
 import persistence.jpa.validation.PersistenceValidationService
 import security.SecurityProviderChain
 import kotlin.reflect.KClass
@@ -52,7 +52,7 @@ class JpaDataProvider<T : Any>(
     private val logger = KraftAdminLogging.logger(javaClass)
 
 
-    private val entityMetadata = EntityMetadata(entityClass)
+    private val entityMetadata = JpaEntityMetadata(entityClass)
     private val rowMapper = ResourceRowMapper(entityClass, applicationContext)
 
     private val fetchAllExecutor = FetchAll(

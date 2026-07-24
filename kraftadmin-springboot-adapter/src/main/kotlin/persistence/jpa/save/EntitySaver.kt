@@ -9,7 +9,7 @@ import org.springframework.transaction.support.TransactionTemplate
 import persistence.error.PersistenceErrorResolver
 import persistence.error.PersistenceException
 import persistence.jpa.conversion.FormDataCoercer
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import persistence.jpa.validation.PersistenceValidationService
 import persistence.jpa.validation.ValidationContext
 import persistence.jpa.validation.ValidationOperation
@@ -19,7 +19,7 @@ class EntitySaver<T : Any>(
     private val entityClass: KClass<T>,
     private val entityManager: EntityManager,
     private val transactionTemplate: TransactionTemplate,
-    private val metadata: EntityMetadata<T>,
+    private val metadata: JpaEntityMetadata<T>,
     private val instantiator: EntityInstantiator<T>,
     private val propertyWriter: PropertyWriter,
     private val relationshipWriter: RelationshipWriter,

@@ -3,7 +3,7 @@ package discovery.descriptors.column.jpa
 import com.kraftadmin.annotations.KraftAdminField
 import com.kraftadmin.annotations.KraftAdminLookup
 import com.kraftadmin.ui_descriptors.LookupDescriptor
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
@@ -23,7 +23,7 @@ class JpaLookupResolver(
             return null
         }
 
-        val entityMetadata = EntityMetadata(targetEntityClass)
+        val entityMetadata = JpaEntityMetadata(targetEntityClass)
 
 
         val fieldAnnotation = annotationResolver.resolveAnnotation(

@@ -7,6 +7,7 @@ import com.kraftadmin.ui_descriptors.ElementCollectionDescriptor
 import com.kraftadmin.ui_descriptors.WYSIWYGOptions
 import com.kraftadmin.logging.KraftAdminLogging
 import discovery.descriptors.column.resolvers.EnumHelper
+import discovery.descriptors.column.resolvers.FileResolver
 import jakarta.persistence.*
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -18,13 +19,12 @@ class JpaColumnResolver(
     private val annotationResolver: JpaAnnotationResolver,
     private val typeResolver: JpaTypeResolver,
     private val lookupResolver: JpaLookupResolver,
-    private val validationResolver: JpaValidationResolver,
+    private val validationResolver: ValidationResolver,
     private val visibilityResolver: JpaVisibilityResolver,
-    private val fileResolver: JpaFileResolver,
+    private val fileResolver: FileResolver,
     private val subColumnBuilder: JpaSubColumnBuilder,
     private val elementCollectionResolver: ElementCollectionResolver
 ) {
-
 
     private val log = KraftAdminLogging.logger(javaClass)
 
@@ -34,11 +34,7 @@ class JpaColumnResolver(
     ): KraftAdminColumn? {
 
         try {
-
-
             val field = property.javaField ?: return null
-
-
 
             if (
                 field.isAnnotationPresent(Transient::class.java) ||

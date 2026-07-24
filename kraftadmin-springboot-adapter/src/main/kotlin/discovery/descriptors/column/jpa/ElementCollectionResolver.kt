@@ -8,6 +8,7 @@ import com.kraftadmin.ui_descriptors.ElementCollectionShape
 import com.kraftadmin.ui_descriptors.EmbeddableFieldDescriptor
 import com.kraftadmin.ui_descriptors.ValueDescriptor
 import com.kraftadmin.ui_descriptors.ValueType
+import discovery.descriptors.column.resolvers.FileResolver
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embeddable
@@ -35,7 +36,7 @@ import kotlin.reflect.jvm.javaField
  */
 object ElementCollectionResolver {
 
-    val fileResolver = JpaFileResolver()
+    val fileResolver = FileResolver()
 
     fun resolve(field: Field): ElementCollectionDescriptor? {
         if (!field.isAnnotationPresent(ElementCollection::class.java)) {

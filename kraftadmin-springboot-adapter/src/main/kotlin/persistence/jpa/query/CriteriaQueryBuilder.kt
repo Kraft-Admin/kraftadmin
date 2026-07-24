@@ -6,7 +6,7 @@ import jakarta.persistence.TypedQuery
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Predicate
 import jakarta.persistence.criteria.Root
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import kotlin.reflect.KClass
 
 /**
@@ -30,7 +30,7 @@ import kotlin.reflect.KClass
 class CriteriaQueryBuilder<T : Any>(
     private val entityManager: EntityManager,
     private val entityClass: KClass<T>,
-    private val metadata: EntityMetadata<T>
+    private val metadata: JpaEntityMetadata<T>
 ) {
     private val logger = KraftAdminLogging.logger(javaClass)
 

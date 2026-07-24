@@ -1,4 +1,4 @@
-package discovery.descriptors.column.jpa
+package discovery.descriptors.column.resolvers
 
 import com.kraftadmin.annotations.FileConfig
 import com.kraftadmin.annotations.FileConfigDefaults
@@ -10,7 +10,7 @@ import com.kraftadmin.ui_descriptors.FileConfigDescriptor
  *
  * If no @FileConfig annotation is present, sensible defaults are used.
  */
-class JpaFileResolver {
+class FileResolver {
 
     fun resolve(
         type: FormInputType,

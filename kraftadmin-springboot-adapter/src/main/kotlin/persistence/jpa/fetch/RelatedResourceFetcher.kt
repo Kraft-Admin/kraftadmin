@@ -3,7 +3,7 @@ package persistence.jpa.fetch
 import com.kraftadmin.logging.KraftAdminLogging
 import jakarta.persistence.*
 import persistence.jpa.metadata.AssociationResolver
-import persistence.jpa.metadata.EntityMetadata
+import persistence.jpa.metadata.JpaEntityMetadata
 import persistence.jpa.metadata.PropertyResolver
 import persistence.jpa.util.HibernateUtil
 import java.lang.reflect.Field
@@ -97,9 +97,9 @@ class RelatedResourceFetcher(private val limit: Int = 10) {
                 items = relatedItems,
                 totalInMemory = itemsList.size,
                 limited = itemsList.size > limit,
-                lookupKey = EntityMetadata(relatedKClass).idField,
-                displayField = EntityMetadata(relatedKClass).displayField,
-                searchableFields = EntityMetadata(relatedKClass).searchableFields
+                lookupKey = JpaEntityMetadata(relatedKClass).idField,
+                displayField = JpaEntityMetadata(relatedKClass).displayField,
+                searchableFields = JpaEntityMetadata(relatedKClass).searchableFields
             )
             
         }

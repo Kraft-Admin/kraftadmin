@@ -29,7 +29,6 @@ class JpaEntityDiscoverer(
                 provider = ProviderType.JPA
                 )
             }
-            logger.debug("EMF ${emf.persistenceUnitUtil}: ${emfEntities.size} entities")
             entities.addAll(emfEntities)
         }
 
