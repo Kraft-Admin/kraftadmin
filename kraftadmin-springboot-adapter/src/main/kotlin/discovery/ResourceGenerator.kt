@@ -77,7 +77,13 @@ object ResourceGenerator {
                 metadata.sortableFields
             }
 
-            override fun getIdentifier(entity: T): Any = {}
+            override fun getIdentifier(entity: T): Any =
+                metadata.getIdentifier(entity)
+                    ?: error(
+                        "Entity identifier cannot be null: " +
+                                entityClass.qualifiedName
+                    )
+
         }
 
         attachDataProvider(resource, discoveredEntity, context, properties)

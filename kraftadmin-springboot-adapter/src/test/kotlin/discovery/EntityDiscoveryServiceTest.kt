@@ -1,5 +1,7 @@
 package discovery
 
+import com.kraftadmin.enums.ProviderType
+import com.kraftadmin.spi.DiscoveredEntity
 import com.kraftadmin.spi.EntityDiscoverer
 import com.kraftadmin.spi.EntityDiscoveryService
 import io.mockk.every
@@ -9,7 +11,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-// Dummy entity classes for testing metadata tracking
 private class MockUserEntity
 private class MockPostEntity
 private class MockTenantEntity
@@ -18,78 +19,208 @@ class EntityDiscoveryServiceTest {
 
     @Test
     fun `discoverAll should aggregate unique entities from all discoverers`() {
-        // Arrange
         val discoverer1 = mockk<EntityDiscoverer> {
-            every { provider } returns "JpaDiscoverer"
-            every { discover() } returns setOf(MockUserEntity::class.java, MockPostEntity::class.java)
+            every { provider } returns ProviderType.JPA
+            every { discover() } returns setOf(
+                DiscoveredEntity(MockUserEntity::class.java, ProviderType.JPA),
+                DiscoveredEntity(MockPostEntity::class.java, ProviderType.JPA)
+            )
         }
+
         val discoverer2 = mockk<EntityDiscoverer> {
-            every { provider } returns "MongoDiscoverer"
-            every { discover() } returns setOf(MockPostEntity::class.java, MockTenantEntity::class.java)
+            every { provider } returns ProviderType.MONGO
+            every { discover() } returns setOf(
+                DiscoveredEntity(MockPostEntity::class.java, ProviderType.MONGO),
+                DiscoveredEntity(MockTenantEntity::class.java, ProviderType.MONGO)
+            )
         }
 
-        val discoveryService = EntityDiscoveryService(listOf(discoverer1, discoverer2))
+        val discoveryService =
+            EntityDiscoveryService(listOf(discoverer1, discoverer2))
 
-        // Act
         val result = discoveryService.discoverAll()
 
-        // Assert
-        assertEquals(3, result.size, "Should aggregate all unique entities across discoverers")
-        assertTrue(result.containsAll(listOf(MockUserEntity::class.java, MockPostEntity::class.java, MockTenantEntity::class.java)))
+        assertEquals(4, result.size)
+
+        assertTrue(
+            result.contains(
+                DiscoveredEntity(
+                    MockUserEntity::class.java,
+                    ProviderType.JPA
+                )
+            )
+        )
+
+        assertTrue(
+            result.contains(
+                DiscoveredEntity(
+                    MockPostEntity::class.java,
+                    ProviderType.JPA
+                )
+            )
+        )
+
+        assertTrue(
+            result.contains(
+                DiscoveredEntity(
+                    MockPostEntity::class.java,
+                    ProviderType.MONGO
+                )
+            )
+        )
+
+        assertTrue(
+            result.contains(
+                DiscoveredEntity(
+                    MockTenantEntity::class.java,
+                    ProviderType.MONGO
+                )
+            )
+        )
     }
 
     @Test
     fun `discoverAll should handle empty discoverer list gracefully`() {
-        // Arrange
-        val discoveryService = EntityDiscoveryService(emptyList())
+        val discoveryService =
+            EntityDiscoveryService(emptyList())
 
-        // Act
         val result = discoveryService.discoverAll()
 
-        // Assert
-        assertTrue(result.isEmpty(), "Result should be empty when no discoverers are registered")
+        assertTrue(result.isEmpty())
     }
 
     @Test
     fun `discoverAll should continue processing if a discoverer throws an exception`() {
-        // Arrange
         val failingDiscoverer = mockk<EntityDiscoverer> {
-            every { provider } returns "BrokenDiscoverer"
-            every { discover() } throws RuntimeException("Database connection failure")
+            every { provider } returns ProviderType.JPA
+            every { discover() } throws RuntimeException(
+                "Database connection failure"
+            )
         }
+
         val healthyDiscoverer = mockk<EntityDiscoverer> {
-            every { provider } returns "HealthyDiscoverer"
-            every { discover() } returns setOf(MockUserEntity::class.java)
+            every { provider } returns ProviderType.MONGO
+            every { discover() } returns setOf(
+                DiscoveredEntity(
+                    MockUserEntity::class.java,
+                    ProviderType.MONGO
+                )
+            )
         }
 
-        val discoveryService = EntityDiscoveryService(listOf(failingDiscoverer, healthyDiscoverer))
+        val discoveryService =
+            EntityDiscoveryService(
+                listOf(
+                    failingDiscoverer,
+                    healthyDiscoverer
+                )
+            )
 
-        // Act
         val result = discoveryService.discoverAll()
 
-        // Assert
-        assertEquals(1, result.size, "Should skip the failing discoverer but still process the healthy one")
-        assertTrue(result.contains(MockUserEntity::class.java))
-        verify(exactly = 1) { failingDiscoverer.discover() }
-        verify(exactly = 1) { healthyDiscoverer.discover() }
+        assertEquals(1, result.size)
+
+        assertTrue(
+            result.contains(
+                DiscoveredEntity(
+                    MockUserEntity::class.java,
+                    ProviderType.MONGO
+                )
+            )
+        )
+
+        verify(exactly = 1) {
+            failingDiscoverer.discover()
+        }
+
+        verify(exactly = 1) {
+            healthyDiscoverer.discover()
+        }
     }
 
     @Test
-    fun `discover override should execute identical collection aggregation logic`() {
-        // Arrange
-        val discoverer = mockk<EntityDiscoverer> {
-            every { provider } returns "CustomDiscoverer"
-            every { discover() } returns setOf(MockTenantEntity::class.java)
+    fun `discover should only return entities from the requested provider`() {
+        val jpaDiscoverer = mockk<EntityDiscoverer> {
+            every { provider } returns ProviderType.JPA
+            every { discover() } returns setOf(
+                DiscoveredEntity(
+                    MockUserEntity::class.java,
+                    ProviderType.JPA
+                )
+            )
         }
-        val discoveryService = EntityDiscoveryService(listOf(discoverer))
 
-        // Act
-        val result = discoveryService.discover()
+        val mongoDiscoverer = mockk<EntityDiscoverer> {
+            every { provider } returns ProviderType.MONGO
+            every { discover() } returns setOf(
+                DiscoveredEntity(
+                    MockTenantEntity::class.java,
+                    ProviderType.MONGO
+                )
+            )
+        }
 
-        // Assert
-        assertEquals("Springboot discovery", discoveryService.provider)
+        val discoveryService =
+            EntityDiscoveryService(
+                listOf(
+                    jpaDiscoverer,
+                    mongoDiscoverer
+                )
+            )
+
+        val result =
+            discoveryService.discover(ProviderType.JPA)
+
         assertEquals(1, result.size)
-        assertTrue(result.contains(MockTenantEntity::class.java))
+
+        assertTrue(
+            result.contains(
+                DiscoveredEntity(
+                    MockUserEntity::class.java,
+                    ProviderType.JPA
+                )
+            )
+        )
     }
 
+    @Test
+    fun `discover should continue processing if matching discoverer throws`() {
+        val failingDiscoverer = mockk<EntityDiscoverer> {
+            every { provider } returns ProviderType.JPA
+            every { discover() } throws RuntimeException(
+                "Database connection failure"
+            )
+        }
+
+        val healthyDiscoverer = mockk<EntityDiscoverer> {
+            every { provider } returns ProviderType.JPA
+            every { discover() } returns setOf(
+                DiscoveredEntity(
+                    MockUserEntity::class.java,
+                    ProviderType.JPA
+                )
+            )
+        }
+
+        val discoveryService =
+            EntityDiscoveryService(
+                listOf(
+                    failingDiscoverer,
+                    healthyDiscoverer
+                )
+            )
+
+        val result =
+            discoveryService.discover(ProviderType.JPA)
+
+        assertEquals(1, result.size)
+
+        verify(exactly = 1) {
+            failingDiscoverer.discover()
+        }
+
+        verify(exactly = 1) {
+            healthyDiscoverer.discover()
+        }
+    }
 }
