@@ -4,7 +4,6 @@ import com.kraftadmin.enums.ActionVariant
 import com.kraftadmin.enums.KraftIcon
 
 import com.kraftadmin.ui_descriptors.ActionTarget
-import com.kraftadmin.ui_descriptors.KraftActionDescriptor
 import kotlin.reflect.KClass
 
 /**
