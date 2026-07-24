@@ -24,6 +24,11 @@ import kotlin.reflect.KClass
     AnnotationTarget.PROPERTY_GETTER
 )
 @Retention(AnnotationRetention.RUNTIME)
+@Deprecated(
+    message = "Use the displayField in @KraftAdminField annotation.",
+    replaceWith = ReplaceWith("KraftAdminField"),
+    level = DeprecationLevel.WARNING
+)
 annotation class KraftAdminLookup(
     val resource: KClass<*>,
     val displayField: String,

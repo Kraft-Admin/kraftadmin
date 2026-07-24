@@ -21,6 +21,10 @@ package com.kraftadmin.annotations
  */
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
+@Deprecated(
+    message = "This feature is currently under development and not yet implemented.",
+    level = DeprecationLevel.ERROR
+)
 annotation class KraftAdminDependsOn(
     val field: String,
     val value: String
