@@ -12,9 +12,11 @@ import com.kraftadmin.api.responses.SystemStatus
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptor
 import com.kraftadmin.ui_descriptors.KraftAdminDescriptorFactory
 import com.kraftadmin.logging.KraftAdminLogging
+import com.kraftadmin.persistence.metrics.KraftMetricService
+import com.kraftadmin.spi.EntityDiscoveryService
 import config.KraftAdminProperties
+import discovery.metrics.MetricDiscoverer
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.context.ApplicationContext
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -34,15 +36,47 @@ class KraftAdminSpringbootMetaController(
     private val descriptorFactory: KraftAdminDescriptorFactory,
     private val chain: SecurityProviderChain,
     private val properties: KraftAdminProperties,
-    private val applicationContext: ApplicationContext,
-    private val customActionService: SpringKraftCustomActionService
+    private val customActionService: SpringKraftCustomActionService,
+    private val entityDiscoveryService: EntityDiscoveryService,
+    private val metricService: KraftMetricService
 ) {
     private val logger = KraftAdminLogging.logger(javaClass)
+
+//    @GetMapping("/dashboard")
+//    fun getDashboardOverview(): ResponseEntity<KraftDashboardResponse> {
+//        val resourceNames = descriptorFactory.getRegisteredResourceNames()
+//
+//        val totalEntitiesCount = resourceNames.sumOf { name ->
+//            descriptorFactory.getTotalCountForResource(name)
+//        }
+//
+//        val stats = listOf(
+//            DashboardStat("Total Managed Records", totalEntitiesCount.toString(), "database"),
+//            DashboardStat("Resources Registered", resourceNames.size.toString(), "layers"),
+//            DashboardStat("Active Sessions", "1", "users")
+//        )
+//
+//        val libraryFeatures = checkFeatureStatus()
+//
+//        val response = KraftDashboardResponse(
+//            title = properties.title,
+//            welcomeMessage = "Welcome to the ${properties.title} admin dashboard.",
+//            stats = stats,
+//            features = libraryFeatures,
+//            systemStatus = SystemStatus(
+//                environment = "Development",
+//                databaseType = "H2 / R2DBC",
+//                totalEntitiesTracked = resourceNames.size
+//            )
+//        )
+//
+//        return ResponseEntity.ok(response)
+//    }
+
 
     @GetMapping("/dashboard")
     fun getDashboardOverview(): ResponseEntity<KraftDashboardResponse> {
         val resourceNames = descriptorFactory.getRegisteredResourceNames()
-
         val totalEntitiesCount = resourceNames.sumOf { name ->
             descriptorFactory.getTotalCountForResource(name)
         }
@@ -52,6 +86,10 @@ class KraftAdminSpringbootMetaController(
             DashboardStat("Resources Registered", resourceNames.size.toString(), "layers"),
             DashboardStat("Active Sessions", "1", "users")
         )
+
+        val discoveredEntities = entityDiscoveryService.discoverAll() // reuse existing discovery
+        val discoveredMetrics = MetricDiscoverer.discover(discoveredEntities)
+        val metrics = metricService.compute(discoveredMetrics)
 
         val libraryFeatures = checkFeatureStatus()
 
@@ -64,7 +102,8 @@ class KraftAdminSpringbootMetaController(
                 environment = "Development",
                 databaseType = "H2 / R2DBC",
                 totalEntitiesTracked = resourceNames.size
-            )
+            ),
+            metrics = metrics
         )
 
         return ResponseEntity.ok(response)
@@ -90,7 +129,7 @@ class KraftAdminSpringbootMetaController(
         @RequestParam(required = false) sortField: String?,
         @RequestParam(required = false) sortDirection: String?
     ): ResourceDataResponse {
-        logger.info("Fetching resource: {}, page: {}, sortField: {}", resourceName, page, sortField)
+        logger.info("Fetching resource: {}, page: {}, sortField: {}, sortDirection: {}", resourceName, page, sortField, sortDirection)
         return descriptorFactory.getResourceData(
             name = resourceName,
             page = page,

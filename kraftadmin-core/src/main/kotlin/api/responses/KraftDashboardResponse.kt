@@ -1,11 +1,14 @@
 package com.kraftadmin.api.responses
 
+import com.kraftadmin.spi.MetricResult
+
 data class KraftDashboardResponse(
     val title: String,
     val welcomeMessage: String,
     val stats: List<DashboardStat>,
     val features: List<LibraryFeature>,
-    val systemStatus: SystemStatus
+    val systemStatus: SystemStatus,
+    val metrics: List<MetricResult> = emptyList()
 )
 
 data class DashboardStat(
