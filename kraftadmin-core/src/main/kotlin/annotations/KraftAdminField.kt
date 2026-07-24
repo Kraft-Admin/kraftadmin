@@ -27,10 +27,16 @@ import com.kraftadmin.enums.FormInputType
  * @property placeholder Placeholder text displayed in form inputs.
  * @property readonly Makes the field visible but not editable.
  * @property displayField Indicates the primary display field for this resource.
+ * Used by both JPA (target entity is inferred from the relation's declared type)
+ * and MongoDB @DBRef fields (same — type inference works there too).
+ * @property referenceTarget MongoDB-only. Declares the target collection name for
+ * a manual/plain reference field (e.g. a String customerId with no @DBRef annotation).
+ * Not used by JPA — JPA infers the target entity directly from a @ManyToOne/@OneToOne
+ * field's declared type, and does not support unmapped foreign-key-style reference
+ * fields via this mechanism. Ignored if set on a JPA entity field.
  * @property wysiwygConfig Configuration for WYSIWYG editors.
  * @property fileConfig Configuration for file upload fields.
  */
-//@Target(AnnotationTarget.FIELD)
 @Target(
     AnnotationTarget.FIELD,
     AnnotationTarget.PROPERTY
@@ -50,6 +56,7 @@ annotation class KraftAdminField(
     val placeholder: String = "",
     val readonly: Boolean = false,
     val displayField: Boolean = false,
+    val referenceTarget: String = "",
     val wysiwygConfig: RichTextConfig = RichTextConfig(),
     val fileConfig: FileConfig = FileConfig()
 )
