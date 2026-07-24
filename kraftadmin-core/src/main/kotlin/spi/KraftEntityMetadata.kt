@@ -11,4 +11,5 @@ interface KraftEntityMetadata<T : Any> {
     val versioningEnabled: Boolean
 
     fun convertId(idValue: Any?): Any?
+    fun getIdentifier(entity: T): Any?
 }
