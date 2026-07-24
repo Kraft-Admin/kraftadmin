@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
+import persistence.jpa.provider.JpaKraftDataProviderFactory
 
 @AutoConfiguration
 @ConditionalOnClass(EntityManagerFactory::class)
@@ -30,6 +31,12 @@ class KraftAdminJpaAutoConfiguration {
     fun jpaDataProviderFactory(entityManager: EntityManager): JpaDataProviderFactory {
         return JpaDataProviderFactory(entityManager)
     }
+
+    @Bean
+    fun jpaKraftDataProviderFactory() : JpaKraftDataProviderFactory {
+        return JpaKraftDataProviderFactory()
+    }
+
 }
 
 class JpaDataProviderFactory(val entityManager: EntityManager)

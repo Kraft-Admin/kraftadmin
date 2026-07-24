@@ -23,8 +23,6 @@ class KraftAdminDiscoveryAutoConfiguration {
     fun entityDiscoveryService(
         discoverers: List<EntityDiscoverer>
     ): EntityDiscoveryService {
-//        logger.info("Creating EntityDiscoveryService")
-//        logger.info("   Discoverers found: ${discoverers.size}")
 
         discoverers.forEach { discoverer ->
             logger.info("   - ${discoverer.provider} Discoverer")
