@@ -34,17 +34,6 @@ import kotlin.reflect.KClass
  * }
  * ```
  */
-//@Target(AnnotationTarget.FUNCTION)
-//@Retention(AnnotationRetention.RUNTIME)
-//annotation class KraftAdminOn(
-////    val entityClass: KClass<*> = Any::class,
-//    vararg val events: KClass<out KraftAdminEvent1>,
-//    val resource: String = "",   // blank = all resources
-//    val async: Boolean = false,  // true = runs on kraftEventExecutor, errors never propagate
-//    val order: Int = 0           // lower = runs first within same event type
-//)
-
-
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class KraftAdminOn(
